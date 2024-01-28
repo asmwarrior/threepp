@@ -234,6 +234,8 @@ set(privateHeaders
 
 set(sources
 
+        "threepp/glad.c"
+
         "threepp/canvas/Canvas.cpp"
 
         "threepp/cameras/Camera.cpp"
@@ -419,7 +421,6 @@ target_compile_features(threepp PUBLIC cxx_std_17)
 if (NOT DEFINED EMSCRIPTEN)
     target_link_libraries(threepp
             PRIVATE
-            glad::glad
             glfw::glfw
     )
 endif ()
