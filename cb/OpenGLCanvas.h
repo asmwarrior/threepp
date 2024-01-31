@@ -42,6 +42,12 @@ public:
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
 
+    void OnMouseMove(wxMouseEvent& event);
+    void OnMousePress(wxMouseEvent& event);
+    void OnMouseRelease(wxMouseEvent& event);
+    void OnMouseWheel(wxMouseEvent& event);
+    void OnKeyPress(wxKeyEvent& event);
+
     wxColour triangleColor{wxColour(255, 128, 51)};
 
     WindowSize size();
