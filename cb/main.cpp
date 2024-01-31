@@ -97,8 +97,17 @@ OpenGLCanvas::OpenGLCanvas(MyFrame *parent, const wxGLAttributes &canvasAttrs)
         openGLContext = nullptr;
     }
 
-    Bind(wxEVT_PAINT, &OpenGLCanvas::OnPaint, this);
-    Bind(wxEVT_SIZE, &OpenGLCanvas::OnSize, this);
+    Bind(wxEVT_PAINT,       &OpenGLCanvas::OnPaint, this);
+    Bind(wxEVT_SIZE,        &OpenGLCanvas::OnSize, this);
+
+    Bind (wxEVT_MOTION,     &OpenGLCanvas::OnMouseMove, this);
+    Bind (wxEVT_LEFT_DOWN,  &OpenGLCanvas::OnMousePress, this);
+    Bind (wxEVT_RIGHT_DOWN, &OpenGLCanvas::OnMousePress, this);
+    Bind (wxEVT_LEFT_UP,    &OpenGLCanvas::OnMouseRelease, this);
+    Bind (wxEVT_RIGHT_UP,   &OpenGLCanvas::OnMouseRelease, this);
+    Bind (wxEVT_MOUSEWHEEL, &OpenGLCanvas::OnMouseWheel, this);
+    Bind (wxEVT_KEY_DOWN,   &OpenGLCanvas::OnKeyPress, this);
+
 }
 
 OpenGLCanvas::~OpenGLCanvas()
@@ -209,4 +218,61 @@ WindowSize OpenGLCanvas::size()
     auto viewPortSize = GetSize() * GetContentScaleFactor();
     WindowSize size{viewPortSize.x, viewPortSize.y};
     return size;
+}
+
+void OpenGLCanvas::OnMouseMove(wxMouseEvent& event)
+{
+    wxPoint pos = event.GetPosition();
+    Vector2 mousePos(static_cast<float>(pos.x), static_cast<float>(pos.y));
+    onMouseMoveEvent(mousePos);
+    Refresh (false);
+    event.Skip();
+}
+
+void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
+{
+    int buttonFlag = event.GetButton();
+    wxPoint pos = event.GetPosition();
+    int button = 0;
+    if (wxMOUSE_BTN_LEFT == buttonFlag)
+        button = 0;
+    else if (wxMOUSE_BTN_RIGHT == buttonFlag)
+        button = 1;
+    Vector2 p{pos.x,pos.y};
+    onMousePressedEvent(button, p, PeripheralsEventSource::MouseAction::PRESS);
+    Refresh (false);
+    event.Skip();
+}
+
+void OpenGLCanvas::OnMouseRelease(wxMouseEvent& event)
+{
+    int buttonFlag = event.GetButton();
+    wxPoint pos = event.GetPosition();
+    int button = 0;
+    if (wxMOUSE_BTN_LEFT == buttonFlag)
+        button = 0;
+    else if (wxMOUSE_BTN_RIGHT == buttonFlag)
+        button = 1;
+    Vector2 p{pos.x,pos.y};
+    onMousePressedEvent(button, p, PeripheralsEventSource::MouseAction::RELEASE);
+    Refresh (false);
+    event.Skip();
+}
+
+void OpenGLCanvas::OnMouseWheel(wxMouseEvent& event)
+{
+    int direction = event.GetWheelRotation()/120; // 1 or -1
+    int xoffset = 0;
+    int yoffset = direction;
+
+    // call the PeripheralsEventSource's member function
+    onMouseWheelEvent({static_cast<float>(xoffset), static_cast<float>(yoffset)});
+
+    Refresh (false);
+    event.Skip();
+}
+
+void OpenGLCanvas::OnKeyPress(wxKeyEvent& event)
+{
+    // Code to handle key press event
 }
