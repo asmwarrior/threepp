@@ -6,7 +6,58 @@ using namespace threepp;
 #include <wx/wx.h>
 #include <wx/glcanvas.h>
 
-#include "OpenGLCanvas.h"
+class MyApp : public wxApp
+{
+public:
+    MyApp() {}
+    bool OnInit() wxOVERRIDE;
+};
+
+class OpenGLCanvas;
+
+class MyFrame : public wxFrame
+{
+public:
+    MyFrame(const wxString &title);
+
+private:
+    OpenGLCanvas *openGLCanvas{nullptr};
+};
+
+class OpenGLCanvas : public wxGLCanvas, public PeripheralsEventSource
+{
+public:
+    OpenGLCanvas(MyFrame *parent, const wxGLAttributes &canvasAttrs);
+    ~OpenGLCanvas();
+
+    bool InitializeOpenGLFunctions();
+    bool InitializeOpenGL();
+
+    void OnPaint(wxPaintEvent &event);
+    void OnSize(wxSizeEvent &event);
+
+    void OnMouseMove(wxMouseEvent& event);
+    void OnMousePress(wxMouseEvent& event);
+    void OnMouseRelease(wxMouseEvent& event);
+    void OnMouseWheel(wxMouseEvent& event);
+    void OnKeyPress(wxKeyEvent& event);
+
+    wxColour triangleColor{wxColour(255, 128, 51)};
+
+    [[nodiscard]] virtual WindowSize size() const override;
+
+private:
+    wxGLContext *openGLContext;
+    bool isOpenGLInitialized{false};
+
+    //////////////////////////////////////////////////////////////////////////////
+    std::shared_ptr<GLRenderer> renderer;
+    std::shared_ptr<Scene> scene;
+    std::shared_ptr<PerspectiveCamera> camera;
+    std::shared_ptr<OrbitControls> controls;
+    //////////////////////////////////////////////////////////////////////////////
+
+};
 
 auto createBox() {
 
@@ -153,7 +204,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     camera = PerspectiveCamera::create(75, size.aspect(), 0.1f, 1000);
     camera->position.z = 5;
 
-    controls = std::make_shared<MyOrbitControls>(*camera, *this); // add this line
+    controls = std::make_shared<OrbitControls>(*camera, *this); // add this line
 
     auto box = createBox();
     scene->add(box);
@@ -213,7 +264,7 @@ void OpenGLCanvas::OnSize(wxSizeEvent &event)
     event.Skip();
 }
 
-WindowSize OpenGLCanvas::size()
+WindowSize OpenGLCanvas::size() const
 {
     auto viewPortSize = GetSize() * GetContentScaleFactor();
     WindowSize size{viewPortSize.x, viewPortSize.y};

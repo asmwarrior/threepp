@@ -49,10 +49,6 @@
 			<Add library="freetype" />
 			<Add directory="../build/bin" />
 		</Linker>
-		<Unit filename="MyCanvas.h" />
-		<Unit filename="MyOrbitControls.cpp" />
-		<Unit filename="MyOrbitControls.hpp" />
-		<Unit filename="OpenGLCanvas.h" />
 		<Unit filename="main.cpp" />
 		<Extensions />
 	</Project>
