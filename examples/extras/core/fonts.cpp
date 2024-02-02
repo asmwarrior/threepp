@@ -112,14 +112,18 @@ int main() {
 
     if (font) {
         const auto material = MeshPhongMaterial::create();
+        const auto material1 = SpriteMaterial::create();
         material->side = Side::Double;
         material->color = Color::orange;
+        
+        material1->side = Side::Double;
+        material1->color = Color::green;
 
         textMesh3d = Text3D::create(ExtrudeTextGeometry::Options(*font, textSize, 1), displayText, material);
         textMesh3d->castShadow = true;
 
-        textMesh2d = Text2D::create(TextGeometry::Options(*font, textSize), displayText, material);
-        textMesh2d->position.z = 2;
+        textMesh2d = Text2D::create(TextGeometry::Options(*font, textSize), displayText, material1);
+        textMesh2d->position.z = 5;
 
         textMesh3d->geometry()->center();
         textMesh2d->geometry()->center();
