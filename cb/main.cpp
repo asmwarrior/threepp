@@ -55,6 +55,19 @@ private:
     std::shared_ptr<Scene> scene;
     std::shared_ptr<PerspectiveCamera> camera;
     std::shared_ptr<OrbitControls> controls;
+    std::shared_ptr<HUD> hud;
+
+    FontLoader fontLoader;
+
+    Font font1;
+    Font font2;
+
+    std::shared_ptr<TextGeometry::Options> opts1;
+    std::shared_ptr<Text2D> hudText1;
+
+    std::shared_ptr<TextGeometry::Options> opts2;
+    std::shared_ptr<Text2D> hudText2;
+
     //////////////////////////////////////////////////////////////////////////////
 
 };
@@ -216,6 +229,29 @@ bool OpenGLCanvas::InitializeOpenGL()
     auto planeMaterial = plane->material()->as<MeshBasicMaterial>();
     scene->add(plane);
 
+    WindowSize s = this->size();
+
+    hud = std::make_shared<HUD>(s);
+
+    font1 = fontLoader.defaultFont();
+    font2 = *fontLoader.load("data/fonts/helvetiker_regular.typeface.json");
+
+    opts1 = std::make_shared<TextGeometry::Options>(font1, 40);
+    hudText1 = std::make_shared<Text2D>(*opts1, "Hello World!");
+    hudText1->setColor(Color::black);
+    hud->add(*hudText1, HUD::Options());
+
+    opts2 = std::make_shared<TextGeometry::Options>(font2, 10, 1);
+    hudText2 = std::make_shared<Text2D>(*opts1, "");
+    hudText2->setColor(Color::red);
+    hud->add(*hudText2, HUD::Options()
+                              .setNormalizedPosition({1, 1})
+                              .setHorizontalAlignment(threepp::HUD::HorizontalAlignment::RIGHT)
+                              .setVerticalAlignment(threepp::HUD::VerticalAlignment::TOP));
+
+    hudText2->setText("Delta=1.23456789", *opts2);
+    hud->needsUpdate(*hudText2);
+
     //////////////////////////////////////////////////////////////////////////////////////
 
     isOpenGLInitialized = true;
@@ -236,6 +272,7 @@ void OpenGLCanvas::OnPaint(wxPaintEvent &WXUNUSED(event))
 
     renderer->clear();
     renderer->render(*scene, *camera);
+    hud->apply(*renderer);
 
     SwapBuffers();
 }
@@ -259,6 +296,8 @@ void OpenGLCanvas::OnSize(wxSizeEvent &event)
         camera->aspect = size.aspect();
         camera->updateProjectionMatrix();
         renderer->setSize(size);
+
+        hud->setSize(size);
     }
 
     event.Skip();
