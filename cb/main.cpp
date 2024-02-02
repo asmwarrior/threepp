@@ -68,6 +68,8 @@ private:
     std::shared_ptr<TextGeometry::Options> opts2;
     std::shared_ptr<Text2D> hudText2;
 
+    std::vector<std::shared_ptr<Text2D>> textMesh2dArray;
+
     //////////////////////////////////////////////////////////////////////////////
 
 };
@@ -251,6 +253,28 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
+
+
+    // billboard text labels
+    unsigned int textSize = 1;
+    std::string displayText = "threepp!";
+
+    const auto material1 = SpriteMaterial::create();
+    material1->side = Side::Double;
+    material1->color = Color::green;
+
+
+    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, material1));
+    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, material1));
+
+    textMesh2dArray[0]->position.z = 5;
+    textMesh2dArray[1]->position.z = -5;
+
+    textMesh2dArray[0]->geometry()->center();
+    textMesh2dArray[1]->geometry()->center();
+
+    scene->add(*(textMesh2dArray[0]));
+    scene->add(*(textMesh2dArray[1]));
 
     //////////////////////////////////////////////////////////////////////////////////////
 
