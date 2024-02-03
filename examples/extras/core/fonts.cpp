@@ -106,7 +106,7 @@ int main() {
     FontLoader loader;
     auto font = loader.load(fontPath / "optimer_bold.typeface.json");
 
-    float textSize = 10;
+    float textSize = 0.5;
     std::shared_ptr<Text3D> textMesh3d;
     std::shared_ptr<Text2D> textMesh2d;
 
