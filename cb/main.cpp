@@ -281,6 +281,31 @@ bool OpenGLCanvas::InitializeOpenGL()
     scene->add(*(textMesh2dArray[0]));
     scene->add(*(textMesh2dArray[1]));
 
+    // add 3D lines
+    // Create a material for the lines
+    auto lineMaterial = threepp::LineBasicMaterial::create();
+    lineMaterial->color.setRGB(1, 0, 0);
+
+    // Create geometry for the lines
+    auto lineGeometry = threepp::BufferGeometry::create();
+    std::vector<float> lineVertices = {
+        -1, 0, 0,  // Start point of line 1
+        1, 0, 0,   // End point of line 1
+        0, -1, 0,  // Start point of line 2
+        0, 1, 0    // End point of line 2
+    };
+    lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(lineVertices, 3));
+
+    // Create the line object
+    auto line = threepp::LineSegments::create(lineGeometry, lineMaterial);
+    scene->add(line);
+
+    // axis
+
+    auto axis = threepp::AxesHelper::create(5);
+    scene->add(axis);
+
+
     //////////////////////////////////////////////////////////////////////////////////////
 
     isOpenGLInitialized = true;
