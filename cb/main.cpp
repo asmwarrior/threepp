@@ -262,6 +262,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     const auto material1 = SpriteMaterial::create();
     material1->side = Side::Double;
     material1->color = Color::green;
+    material1->sizeAttenuation = false;
 
 
     textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, material1));
@@ -269,6 +270,10 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     textMesh2dArray[0]->position.z = 5;
     textMesh2dArray[1]->position.z = -5;
+
+    textMesh2dArray[0]->scale.set(0.05,0.05,0.05);
+    textMesh2dArray[1]->scale.set(0.05,0.05,0.05);
+
 
     textMesh2dArray[0]->geometry()->center();
     textMesh2dArray[1]->geometry()->center();
