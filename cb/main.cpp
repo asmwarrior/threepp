@@ -256,7 +256,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
     // billboard text labels
-    unsigned int textSize = 1;
+    float textSize = 0.5;
     std::string displayText = "threepp!";
 
     const auto material1 = SpriteMaterial::create();
@@ -271,8 +271,8 @@ bool OpenGLCanvas::InitializeOpenGL()
     textMesh2dArray[0]->position.z = 5;
     textMesh2dArray[1]->position.z = -5;
 
-    textMesh2dArray[0]->scale.set(0.05,0.05,0.05);
-    textMesh2dArray[1]->scale.set(0.05,0.05,0.05);
+//    textMesh2dArray[0]->scale.set(0.05,0.05,0.05);
+//    textMesh2dArray[1]->scale.set(0.05,0.05,0.05);
 
 
     textMesh2dArray[0]->geometry()->center();
