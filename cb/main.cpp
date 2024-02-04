@@ -41,6 +41,7 @@ public:
     void OnMouseRelease(wxMouseEvent& event);
     void OnMouseWheel(wxMouseEvent& event);
     void OnKeyPress(wxKeyEvent& event);
+    void OnKeyUp(wxKeyEvent& event);
 
     wxColour triangleColor{wxColour(255, 128, 51)};
 
@@ -173,6 +174,7 @@ OpenGLCanvas::OpenGLCanvas(MyFrame *parent, const wxGLAttributes &canvasAttrs)
     Bind (wxEVT_RIGHT_UP,   &OpenGLCanvas::OnMouseRelease, this);
     Bind (wxEVT_MOUSEWHEEL, &OpenGLCanvas::OnMouseWheel, this);
     Bind (wxEVT_KEY_DOWN,   &OpenGLCanvas::OnKeyPress, this);
+    Bind (wxEVT_KEY_UP,     &OpenGLCanvas::OnKeyUp, this);
 
 }
 
@@ -253,7 +255,6 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
-
 
     // billboard text labels
     float textSize = 0.02;
@@ -449,7 +450,95 @@ void OpenGLCanvas::OnMouseWheel(wxMouseEvent& event)
     event.Skip();
 }
 
+Key wxKeyCodeToKey(int wx_keycode)
+{
+    switch (wx_keycode) {
+        case '0': return Key::NUM_0;
+        case '1': return Key::NUM_1;
+        case '2': return Key::NUM_2;
+        case '3': return Key::NUM_3;
+        case '4': return Key::NUM_4;
+        case '5': return Key::NUM_5;
+        case '6': return Key::NUM_6;
+        case '7': return Key::NUM_7;
+        case '8': return Key::NUM_8;
+        case '9': return Key::NUM_9;
+
+        case WXK_F1: return Key::F1;
+        case WXK_F2: return Key::F2;
+        case WXK_F3: return Key::F3;
+        case WXK_F4: return Key::F4;
+        case WXK_F5: return Key::F5;
+        case WXK_F6: return Key::F6;
+        case WXK_F7: return Key::F7;
+        case WXK_F8: return Key::F8;
+        case WXK_F9: return Key::F9;
+        case WXK_F10: return Key::F10;
+        case WXK_F11: return Key::F11;
+        case WXK_F12: return Key::F12;
+
+        case 'A': return Key::A;
+        case 'B': return Key::B;
+        case 'C': return Key::C;
+        case 'D': return Key::D;
+        case 'E': return Key::E;
+        case 'F': return Key::F;
+        case 'G': return Key::G;
+        case 'H': return Key::H;
+        case 'I': return Key::I;
+        case 'J': return Key::J;
+        case 'K': return Key::K;
+        case 'L': return Key::L;
+        case 'M': return Key::M;
+        case 'N': return Key::N;
+        case 'O': return Key::O;
+        case 'P': return Key::P;
+        case 'Q': return Key::Q;
+        case 'R': return Key::R;
+        case 'S': return Key::S;
+        case 'T': return Key::T;
+        case 'U': return Key::U;
+        case 'V': return Key::V;
+        case 'W': return Key::W;
+        case 'X': return Key::X;
+        case 'Y': return Key::Y;
+        case 'Z': return Key::Z;
+
+        case WXK_UP: return Key::UP;
+        case WXK_DOWN: return Key::DOWN;
+        case WXK_LEFT: return Key::LEFT;
+        case WXK_RIGHT: return Key::RIGHT;
+
+//        case WXK_SPACE: return Key::SPACE;
+//        case WXK_COMMA: return Key::COMMA;
+//        case WXK_MINUS: return Key::MINUS;
+//        case WXK_PERIOD: return Key::PERIOD;
+//        case WXK_SLASH: return Key::SLASH;
+
+        case WXK_RETURN: return Key::ENTER;
+        case WXK_TAB: return Key::TAB;
+        case WXK_BACK: return Key::BACKSLASH;
+        case WXK_INSERT: return Key::INSERT;
+//        case WXK_DELETE: return Key::DELETE;
+
+        default: return Key::UNKNOWN;
+    }
+}
+
 void OpenGLCanvas::OnKeyPress(wxKeyEvent& event)
 {
-    // Code to handle key press event
+    int key = event.GetKeyCode();
+    int mods = event.GetModifiers();
+    int scancode = key; // not sure what does the scancode mean
+    KeyEvent evt{wxKeyCodeToKey(key), scancode, mods};
+    onKeyEvent(evt, PeripheralsEventSource::KeyAction::PRESS);
+}
+
+void OpenGLCanvas::OnKeyUp(wxKeyEvent& event)
+{
+    int key = event.GetKeyCode();
+    int mods = event.GetModifiers();
+    int scancode = key; // not sure what does the scancode mean
+    KeyEvent evt{wxKeyCodeToKey(key), scancode, mods};
+    onKeyEvent(evt, PeripheralsEventSource::KeyAction::RELEASE);
 }
