@@ -452,6 +452,7 @@ void OpenGLCanvas::OnMouseWheel(wxMouseEvent& event)
 
 Key wxKeyCodeToKey(int wx_keycode)
 {
+    // defined in \include\wx-3.2\wx\defs.h
     switch (wx_keycode) {
         case '0': return Key::NUM_0;
         case '1': return Key::NUM_1;
@@ -509,7 +510,7 @@ Key wxKeyCodeToKey(int wx_keycode)
         case WXK_LEFT: return Key::LEFT;
         case WXK_RIGHT: return Key::RIGHT;
 
-//        case WXK_SPACE: return Key::SPACE;
+        case WXK_SPACE: return Key::SPACE;
 //        case WXK_COMMA: return Key::COMMA;
 //        case WXK_MINUS: return Key::MINUS;
 //        case WXK_PERIOD: return Key::PERIOD;
@@ -519,6 +520,10 @@ Key wxKeyCodeToKey(int wx_keycode)
         case WXK_TAB: return Key::TAB;
         case WXK_BACK: return Key::BACKSLASH;
         case WXK_INSERT: return Key::INSERT;
+
+// DELETE was defined in mingw, see:
+// /mingw64/include/winnt.h:3009
+// #define DELETE (__MSABI_LONG(0x00010000))
 //        case WXK_DELETE: return Key::DELETE;
 
         default: return Key::UNKNOWN;
