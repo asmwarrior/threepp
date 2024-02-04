@@ -305,6 +305,39 @@ bool OpenGLCanvas::InitializeOpenGL()
     auto axis = threepp::AxesHelper::create(5);
     scene->add(axis);
 
+    // points
+    const int numParticles = 5;
+    std::vector<float> positions(numParticles * 3);
+    std::vector<float> colors(numParticles * 3);
+
+    const float n = 10;
+    const float n2 = n / 2;
+
+    for (int i = 0; i < numParticles; i += 3) {
+        positions[i] = (math::randFloat() * n - n2);
+        positions[i + 1] = (math::randFloat() * n - n2);
+        positions[i + 2] = (math::randFloat() * n - n2);
+
+        colors[i] = ((positions[i] / n) + 0.5f);
+        colors[i + 1] = ((positions[i + 1] / n) + 0.5f);
+        colors[i + 2] = ((positions[i + 2] / n) + 0.5f);
+    }
+
+    auto geometry = BufferGeometry::create();
+    geometry->setAttribute("position", FloatBufferAttribute::create(positions, 3));
+    geometry->setAttribute("color", FloatBufferAttribute::create(colors, 3));
+
+    geometry->computeBoundingSphere();
+
+    auto material = PointsMaterial::create();
+    material->size = 0.2;
+    material->vertexColors = true;
+
+    auto points = Points::create(geometry, material);
+    scene->add(points);
+
+    //
+
 
     //////////////////////////////////////////////////////////////////////////////////////
 
