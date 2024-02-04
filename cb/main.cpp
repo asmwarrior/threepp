@@ -256,7 +256,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
     // billboard text labels
-    float textSize = 0.5;
+    float textSize = 0.02;
     std::string displayText = "threepp!";
 
     const auto material1 = SpriteMaterial::create();
