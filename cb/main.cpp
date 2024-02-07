@@ -20,6 +20,8 @@ class MyFrame : public wxFrame
 public:
     MyFrame(const wxString &title);
 
+    void OnButtonAddPointClicked(wxCommandEvent& event);
+
 private:
     OpenGLCanvas *openGLCanvas{nullptr};
 };
@@ -146,7 +148,23 @@ MyFrame::MyFrame(const wxString &title)
         sizer->Add(openGLCanvas, 1, wxEXPAND);
     }
 
+    auto bottomSizer = new wxBoxSizer(wxHORIZONTAL);
+    auto addPointButton = new wxButton(this, wxID_ANY, "Add new points to line");
+
+    bottomSizer->Add(addPointButton, 0, wxALL | wxALIGN_CENTER, FromDIP(15));
+    bottomSizer->AddStretchSpacer(1);
+
+    sizer->Add(bottomSizer, 0, wxEXPAND);
+
     SetSizerAndFit(sizer);
+
+    // Bind button click events to event handlers
+    addPointButton->Bind(wxEVT_BUTTON, &MyFrame::OnButtonAddPointClicked, this);
+}
+
+void MyFrame::OnButtonAddPointClicked(wxCommandEvent& event)
+{
+    wxMessageBox("hihihi");
 }
 
 OpenGLCanvas::OpenGLCanvas(MyFrame *parent, const wxGLAttributes &canvasAttrs)
@@ -282,7 +300,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     scene->add(*(textMesh2dArray[0]));
     scene->add(*(textMesh2dArray[1]));
 
-    // add 3D lines
+    // add 3D lines, we use line segment here
     // Create a material for the lines
     auto lineMaterial = threepp::LineBasicMaterial::create();
     lineMaterial->color.setRGB(1, 0, 0);
@@ -300,6 +318,23 @@ bool OpenGLCanvas::InitializeOpenGL()
     // Create the line object
     auto line = threepp::LineSegments::create(lineGeometry, lineMaterial);
     scene->add(line);
+
+    // add 3D line segments
+
+    // Create geometry for the lines
+    auto longLineGeometry = threepp::BufferGeometry::create();
+    std::vector<float> longLineVertices = {
+        -1, 0, 0,
+        1, 0, 0,
+        0, -1, 0,
+        0, 1, 0
+    };
+    lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(lineVertices, 3));
+
+    // Create the line object
+    auto line = threepp::LineSegments::create(lineGeometry, lineMaterial);
+    scene->add(line);
+
 
     // axis
 
