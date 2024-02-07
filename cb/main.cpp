@@ -260,14 +260,14 @@ bool OpenGLCanvas::InitializeOpenGL()
     float textSize = 0.02;
     std::string displayText = "threepp!";
 
-    const auto material1 = SpriteMaterial::create();
-    material1->side = Side::Double;
-    material1->color = Color::green;
-    material1->sizeAttenuation = false;
+    const auto textLabelMaterial = SpriteMaterial::create();
+    textLabelMaterial->side = Side::Double;
+    textLabelMaterial->color = Color::green;
+    textLabelMaterial->sizeAttenuation = false;
 
 
-    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, material1));
-    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, material1));
+    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, textLabelMaterial));
+    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, textLabelMaterial));
 
     textMesh2dArray[0]->position.z = 5;
     textMesh2dArray[1]->position.z = -5;
