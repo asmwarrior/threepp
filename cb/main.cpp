@@ -337,7 +337,30 @@ bool OpenGLCanvas::InitializeOpenGL()
     auto points = Points::create(geometry, material);
     scene->add(points);
 
-    //
+    // ticks and labels from -5 to 5
+    auto tickMaterial = threepp::LineBasicMaterial::create();
+    tickMaterial->color = threepp::Color::gray;
+
+    float tickLength = 0.2f;
+    float labelOffset = 0.3f;
+
+    for (float i = -5; i <= 5; i += 1.0f) {
+        // X-axis ticks
+        auto xTickGeometry = threepp::BufferGeometry::create();
+        xTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({i, -tickLength, 0, i, tickLength, 0}, 3));
+        auto xTick = threepp::LineSegments::create(xTickGeometry, tickMaterial);
+        scene->add(xTick);
+
+        // X-axis labels
+        auto xLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize), std::to_string(static_cast<int>(i)), textLabelMaterial);
+
+        xLabel->position = {i, -labelOffset, 0};
+        scene->add(xLabel);
+
+        // Repeat the above steps for Y and Z axes
+    }
+
+
 
 
     //////////////////////////////////////////////////////////////////////////////////////
