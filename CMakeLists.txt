@@ -12,6 +12,10 @@ option(THREEPP_WITH_AUDIO "Build with Audio" ON)
 option(THREEPP_TREAT_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 
 
+if(NOT DEFINED THREEPP_USE_EXTERNAL_GLFW)
+    set(THREEPP_USE_EXTERNAL_GLFW ON)
+endif()
+
 # Force THREEPP_WITH_GLFW ON when targeting Emscripten
 cmake_dependent_option(THREEPP_WITH_GLFW "Build with GLFW frontend" ON "NOT DEFINED EMSCRIPTEN" ON)
 # Force THREEPP_USE_EXTERNAL_GLFW OFF if NOT THREEPP_WITH_GLFW
