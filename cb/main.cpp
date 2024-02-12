@@ -324,16 +324,16 @@ bool OpenGLCanvas::InitializeOpenGL()
     // Create geometry for the lines
     auto longLineGeometry = threepp::BufferGeometry::create();
     std::vector<float> longLineVertices = {
-        -1, 0, 0,
-        1, 0, 0,
-        0, -1, 0,
-        0, 1, 0
+        0, 0, 0,
+        1, 1, 2,
+        2, 3, 4,
+        6, 8, 9
     };
-    lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(lineVertices, 3));
+    lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(longLineVertices, 3));
 
     // Create the line object
-    auto line = threepp::LineSegments::create(lineGeometry, lineMaterial);
-    scene->add(line);
+    auto line2 = threepp::Line::create(lineGeometry, lineMaterial);
+    scene->add(line2);
 
 
     // axis
