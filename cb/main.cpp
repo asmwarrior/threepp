@@ -49,6 +49,11 @@ public:
 
     [[nodiscard]] virtual WindowSize size() const override;
 
+    std::shared_ptr<Scene> GetSceneObject()
+    {
+        return scene;
+    }
+
 private:
     wxGLContext *openGLContext;
     bool isOpenGLInitialized{false};
@@ -164,7 +169,26 @@ MyFrame::MyFrame(const wxString &title)
 
 void MyFrame::OnButtonAddPointClicked(wxCommandEvent& event)
 {
-    wxMessageBox("hihihi");
+    auto scene = openGLCanvas->GetSceneObject();
+
+    auto line = scene->getObjectByName("line3d");
+
+    BufferGeometry* geometry = line->geometry();
+
+    const auto position = geometry->getAttribute<float>("position");
+    auto& array = position->array();
+    array.push_back(50.0); // point.x
+    array.push_back(50.0); // point.y
+    array.push_back(50.0); // point.z
+
+    geometry->setAttribute("position", FloatBufferAttribute::create(array, 3));
+
+    position->needsUpdate();
+
+    geometry->computeBoundingSphere();
+
+    Refresh(false);
+
 }
 
 OpenGLCanvas::OpenGLCanvas(MyFrame *parent, const wxGLAttributes &canvasAttrs)
@@ -333,6 +357,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     // Create the line object
     auto line2 = threepp::Line::create(lineGeometry, lineMaterial);
+    line2->name = "line3d";
     scene->add(line2);
 
 
