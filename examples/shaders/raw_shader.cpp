@@ -102,5 +102,9 @@ std::string fragmentSource() {
                    vec4 color = vec4( vColor );
                    color.r += sin( vPosition.x * 10.0 + time ) * 0.5;
                    gl_FragColor = color;
+                   vec2 circCoord = 2.0 * gl_PointCoord - 1;
+                   if (dot(circCoord, circCoord) > 1) {
+                       discard;
+                   }
                 })";
 }
