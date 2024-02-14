@@ -21,13 +21,13 @@ int main() {
     auto camera = PerspectiveCamera::create(60, canvas.aspect(), 1, 10);
     camera->position.z = 2;
 
-    int triangles = 1000;
+    int points = 10;
     std::vector<float> positions;
-    positions.reserve(triangles * 3);
+    positions.reserve(points * 3);
     std::vector<float> colors;
-    colors.reserve(triangles * 4);
+    colors.reserve(points * 4);
 
-    for (int i = 0; i < triangles; i++) {
+    for (int i = 0; i < points; i++) {
         positions.emplace_back(math::randFloat() - .5f);
         positions.emplace_back(math::randFloat() - .5f);
         positions.emplace_back(math::randFloat() - .5f);
@@ -48,8 +48,8 @@ int main() {
     material->side = Side::Double;
     material->transparent = true;
 
-    auto mesh = Mesh::create(geometry, material);
-    scene->add(mesh);
+    auto pointObject = Points::create(geometry, material);
+    scene->add(pointObject);
 
     canvas.onWindowResize([&](WindowSize size) {
         camera->aspect = size.aspect();
@@ -61,7 +61,7 @@ int main() {
     canvas.animate([&]() {
         float t = clock.getElapsedTime();
 
-        mesh->rotation.y = t * 0.5f;
+        pointObject->rotation.y = t * 0.5f;
         material->uniforms["time"].setValue(t * 5);
 
         renderer.render(*scene, *camera);
@@ -84,6 +84,7 @@ std::string vertexSource() {
                    vPosition = position;
                    vColor = color;
                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                   gl_PointSize = 10.0;
                })";
 }
 
