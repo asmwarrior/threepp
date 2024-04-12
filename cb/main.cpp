@@ -173,7 +173,7 @@ void MyFrame::OnButtonAddPointClicked(wxCommandEvent& event)
 
     auto line = scene->getObjectByName("line3d");
 
-    BufferGeometry* geometry = line->geometry();
+    std::shared_ptr<BufferGeometry> geometry = line->geometry();
 
     const auto position = geometry->getAttribute<float>("position");
     auto& array = position->array();
