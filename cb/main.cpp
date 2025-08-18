@@ -278,6 +278,8 @@ bool OpenGLCanvas::InitializeOpenGL()
     wxLogDebug("OpenGL vendor: %s", reinterpret_cast<const char *>(glGetString(GL_VENDOR)));
 
 
+    glEnable(GL_PROGRAM_POINT_SIZE);
+
     //////////////////////////////////////////////////////////////////////////////////////
 
     auto viewPortSize = GetSize() * GetContentScaleFactor();
