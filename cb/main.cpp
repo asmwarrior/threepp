@@ -522,13 +522,14 @@ bool OpenGLCanvas::InitializeOpenGL()
         #define varying out
         uniform mat4 modelViewMatrix;
         uniform mat4 projectionMatrix;
+        uniform float pointSize;  // uniform to control circle radius
         attribute vec3 position;
         attribute vec4 color;
         varying vec4 vColor;
         void main() {
             vColor = color;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = 20.0;
+            gl_PointSize = pointSize;   // use uniform instead of fixed value
         }
     )";
 
@@ -548,10 +549,12 @@ bool OpenGLCanvas::InitializeOpenGL()
     material->side = Side::Double;
     material->transparent = false;
 
+    // set initial point size
+    material->uniforms["pointSize"] = threepp::Uniform(10.0f);  // programmer can modify this
+
     auto points = Points::create(geometry, material);
     scene->add(points);
 }
-
 
 
 
