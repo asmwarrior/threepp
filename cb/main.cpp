@@ -167,28 +167,55 @@ MyFrame::MyFrame(const wxString &title)
     addPointButton->Bind(wxEVT_BUTTON, &MyFrame::OnButtonAddPointClicked, this);
 }
 
+#include <random>
+
 void MyFrame::OnButtonAddPointClicked(wxCommandEvent& event)
 {
     auto scene = openGLCanvas->GetSceneObject();
-
     auto line = scene->getObjectByName("line3d");
-
     std::shared_ptr<BufferGeometry> geometry = line->geometry();
-
     const auto position = geometry->getAttribute<float>("position");
+
     auto& array = position->array();
-    array.push_back(50.0); // point.x
-    array.push_back(50.0); // point.y
-    array.push_back(50.0); // point.z
 
-    geometry->setAttribute("position", FloatBufferAttribute::create(array, 3));
+    // Use a random device to seed the random number generator
+    std::random_device rd;
+    std::mt19937 gen(rd());
 
+    // Define a distribution to generate floating-point numbers in a range
+    // Adjust the range to control how far the new points can be from the last one.
+    const float range = 10.0f; // Example: new points will be within 10 units of the last one
+    std::uniform_real_distribution<float> distrib(-range, range);
+
+    // Get the coordinates of the last point
+    // We need to check if the array has points before we can read from it
+    float lastX = 0.0f;
+    float lastY = 0.0f;
+    float lastZ = 0.0f;
+
+    if (!array.empty()) {
+        const size_t numPoints = array.size() / 3;
+        const size_t lastPointIndex = (numPoints - 1) * 3;
+        lastX = array[lastPointIndex];
+        lastY = array[lastPointIndex + 1];
+        lastZ = array[lastPointIndex + 2];
+    }
+
+    // Calculate new point coordinates by adding random offsets to the last point
+    float newX = lastX + distrib(gen);
+    float newY = lastY + distrib(gen);
+    float newZ = lastZ + distrib(gen);
+
+    // Add the new random point to the array
+    array.push_back(newX);
+    array.push_back(newY);
+    array.push_back(newZ);
+
+    // Update the geometry
+    geometry->setAttribute("position", threepp::FloatBufferAttribute::create(array, 3));
     position->needsUpdate();
-
     geometry->computeBoundingSphere();
-
     Refresh(false);
-
 }
 
 OpenGLCanvas::OpenGLCanvas(MyFrame *parent, const wxGLAttributes &canvasAttrs)
