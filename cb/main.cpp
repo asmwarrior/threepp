@@ -463,6 +463,100 @@ bool OpenGLCanvas::InitializeOpenGL()
     }
 
 
+//    // ---- sample data: 5 points ----
+//    {
+//        std::vector<float> vertices = {
+//            0.0f, 0.0f, 0.0f,
+//            1.0f, 0.0f, 0.0f,
+//            0.0f, 1.0f, 0.0f,
+//            0.0f, 0.0f, 1.0f,
+//           -1.0f,-1.0f, 0.0f
+//        };
+//
+//        std::vector<float> colors = {
+//            1, 0, 0,
+//            0, 1, 0,
+//            0, 0, 1,
+//            1, 1, 0,
+//            1, 0, 1
+//        };
+//
+//        auto geometry = BufferGeometry::create();
+//        geometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
+//        geometry->setAttribute("color", FloatBufferAttribute::create(colors, 3));
+//
+//        auto material = PointsMaterial::create();
+//        material->size = 50.0f;
+//        material->sizeAttenuation = false;
+//        material->vertexColors = true;
+//
+//        auto points = Points::create(geometry, material);
+//        scene->add(points);
+//
+//    }
+//
+
+// ---- sample data: 5 points with RawShaderMaterial ----
+{
+    std::vector<float> vertices = {
+        0.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 1.0f,
+       -1.0f,-1.0f, 0.0f
+    };
+
+    std::vector<float> colors = {
+        1, 0, 0, 1,
+        0, 1, 0, 1,
+        0, 0, 1, 1,
+        1, 1, 0, 1,
+        1, 0, 1, 1
+    };
+
+    auto geometry = BufferGeometry::create();
+    geometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
+    geometry->setAttribute("color", FloatBufferAttribute::create(colors, 4));
+
+    auto material = RawShaderMaterial::create();
+    material->vertexShader = R"(
+        #version 330 core
+        #define attribute in
+        #define varying out
+        uniform mat4 modelViewMatrix;
+        uniform mat4 projectionMatrix;
+        attribute vec3 position;
+        attribute vec4 color;
+        varying vec4 vColor;
+        void main() {
+            vColor = color;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = 20.0;
+        }
+    )";
+
+    material->fragmentShader = R"(
+        #version 330 core
+        #define varying in
+        out vec4 pc_fragColor;
+        #define gl_FragColor pc_fragColor
+        varying vec4 vColor;
+        void main() {
+            vec2 coord = 2.0 * gl_PointCoord - 1.0;
+            if(dot(coord, coord) > 1.0) discard;
+            gl_FragColor = vColor;
+        }
+    )";
+
+    material->side = Side::Double;
+    material->transparent = false;
+
+    auto points = Points::create(geometry, material);
+    scene->add(points);
+}
+
+
+
 
 
     //////////////////////////////////////////////////////////////////////////////////////
