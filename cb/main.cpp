@@ -83,6 +83,13 @@ private:
 
     std::vector<std::shared_ptr<Text2D>> textMesh2dArray;
 
+
+    private:
+    // For object picking
+    Raycaster raycaster;
+    Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
+    std::shared_ptr<Mesh> selectionMarker; // e.g. a small sphere to show hit point
+
     //////////////////////////////////////////////////////////////////////////////
 
 };
@@ -558,6 +565,15 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
 
+float sphereRadius = 0.1f;
+auto sphereGeometry = SphereGeometry::create(sphereRadius);
+auto sphereMaterial = MeshBasicMaterial::create();
+sphereMaterial->color = Color::red;
+selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
+selectionMarker->visible = false;
+scene->add(selectionMarker);
+
+
 
     //////////////////////////////////////////////////////////////////////////////////////
 
@@ -623,11 +639,20 @@ void OpenGLCanvas::OnMouseMove(wxMouseEvent& event)
     Vector2 mousePos(static_cast<float>(pos.x), static_cast<float>(pos.y));
     onMouseMoveEvent(mousePos);
     Refresh (false);
+
+
+    wxSize sz = GetSize();
+    int x = event.GetX();
+    int y = event.GetY();
+
+    mouse.x = (static_cast<float>(x) / sz.GetWidth()) * 2.f - 1.f;
+    mouse.y = -(static_cast<float>(y) / sz.GetHeight()) * 2.f + 1.f;
+
     event.Skip();
 }
 
-void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
-{
+void OpenGLCanvas::OnMousePress(wxMouseEvent& event) {
+
     int buttonFlag = event.GetButton();
     wxPoint pos = event.GetPosition();
     int button = 0;
@@ -639,7 +664,50 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     onMousePressedEvent(button, p, PeripheralsEventSource::MouseAction::PRESS);
     Refresh (false);
     event.Skip();
+
+    // Convert mouse coordinates to normalized device coordinates (-1..1)
+    int mouseX = event.GetX();
+    int mouseY = event.GetY();
+    int w, h;
+    GetSize(&w, &h);
+
+    threepp::Vector2 mouse(
+        (2.0f * mouseX) / static_cast<float>(w) - 1.0f,
+        -((2.0f * mouseY) / static_cast<float>(h) - 1.0f)
+    );
+
+    // Setup raycaster from camera
+    raycaster.setFromCamera(mouse, *camera);
+
+    selectionMarker->visible = false;
+    auto intersects = raycaster.intersectObjects(scene->children, true);
+
+    if (!intersects.empty()) {
+        const auto& intersect = intersects.front();
+
+        // Move selection marker
+        selectionMarker->position.copy(intersect.point);
+        selectionMarker->visible = true;
+
+        // --- Highlight the clicked object ---
+        threepp::Object3D* selectedObject = intersect.object;
+
+        if (auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject)) {
+            if (auto mat = std::dynamic_pointer_cast<threepp::MeshBasicMaterial>(mesh->material())) {
+                mat->color = threepp::Color::yellow;
+            }
+        }
+        else if (auto points = dynamic_cast<threepp::Points*>(selectedObject)) {
+            if (auto mat = std::dynamic_pointer_cast<threepp::PointsMaterial>(points->material())) {
+                mat->color = threepp::Color::red;
+                mat->size *= 1.5f; // make it bigger when selected
+            }
+        }
+    }
+
+    event.Skip(); // allow other handlers to run
 }
+
 
 void OpenGLCanvas::OnMouseRelease(wxMouseEvent& event)
 {
