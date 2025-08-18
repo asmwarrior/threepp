@@ -1,5 +1,10 @@
 #include "threepp/threepp.hpp"
 
+#include <threepp/materials/ShaderMaterial.hpp>
+#include "threepp/materials/RawShaderMaterial.hpp"
+#include <threepp/core/Uniform.hpp>
+
+
 using namespace threepp;
 
 #include <glad/glad.h> //gladLoadGL(), must be included before glcanvas.h
