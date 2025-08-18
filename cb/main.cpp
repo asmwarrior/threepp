@@ -380,10 +380,10 @@ bool OpenGLCanvas::InitializeOpenGL()
         2, 3, 4,
         6, 8, 9
     };
-    lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(longLineVertices, 3));
+    longLineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(longLineVertices, 3));
 
     // Create the line object
-    auto line2 = threepp::Line::create(lineGeometry, lineMaterial);
+    auto line2 = threepp::Line::create(longLineGeometry, lineMaterial);
     line2->name = "line3d";
     scene->add(line2);
 
