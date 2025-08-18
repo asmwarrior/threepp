@@ -430,14 +430,6 @@ bool OpenGLCanvas::InitializeOpenGL()
 //    scene->add(points);
 //}
 
-    geometry->computeBoundingSphere();
-
-    auto material = PointsMaterial::create();
-    material->size = 0.2;
-    material->vertexColors = true;
-
-    auto points = Points::create(geometry, material);
-    scene->add(points);
 
     // ticks and labels from -5 to 5
     auto tickMaterial = threepp::LineBasicMaterial::create();
