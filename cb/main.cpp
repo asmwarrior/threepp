@@ -3,13 +3,107 @@
 #include <threepp/materials/ShaderMaterial.hpp>
 #include "threepp/materials/RawShaderMaterial.hpp"
 #include <threepp/core/Uniform.hpp>
-
+#include <threepp/objects/Points.hpp>
+#include <threepp/core/BufferGeometry.hpp>
+#include <threepp/materials/Material.hpp>
+#include <threepp/math/Ray.hpp>
+#include <threepp/math/Matrix4.hpp>
+#include <threepp/core/BufferAttribute.hpp>
+#include <threepp/core/Raycaster.hpp>
 
 using namespace threepp;
 
 #include <glad/glad.h> //gladLoadGL(), must be included before glcanvas.h
 #include <wx/wx.h>
 #include <wx/glcanvas.h>
+
+
+class CustomPoints : public threepp::Points {
+public:
+    using Ptr = std::shared_ptr<CustomPoints>;
+
+    static Ptr create(const std::shared_ptr<threepp::BufferGeometry>& geometry,
+                      const std::shared_ptr<threepp::Material>& material) {
+        return Ptr(new CustomPoints(geometry, material));
+    }
+
+    void raycast(const threepp::Raycaster& raycaster,
+                 std::vector<threepp::Intersection>& intersects) override {
+
+        std::cout << "CustomPoints::raycast called for object: " << this << std::endl;
+
+        auto material_ptr = std::dynamic_pointer_cast<threepp::RawShaderMaterial>(this->material());
+        if (!material_ptr) {
+            std::cout << "No RawShaderMaterial, returning.\n";
+            return;
+        }
+
+        auto positions = geometry()->getAttribute<float>("position");
+        if (!positions) {
+            std::cout << "No position attribute, returning.\n";
+            return;
+        }
+
+        // Create a temporary Matrix4 to hold the inverted world matrix
+        threepp::Matrix4 tempMatrix;
+        tempMatrix.copy(*this->matrixWorld).invert();
+
+        // Apply object's inverted world matrix to the ray to get it into local space
+        threepp::Ray localRay = raycaster.ray;
+        localRay.applyMatrix4(tempMatrix);
+
+        // Get the world scale from the object's matrix
+        const float worldScale = this->matrixWorld->getMaxScaleOnAxis();
+        //const float threshold = material_ptr->size / 2.0f;
+
+        const float threshold = 0.5;
+
+        for (size_t i = 0; i < positions->count(); ++i) {
+            threepp::Vector3 point_local(
+                positions->getX(i),
+                positions->getY(i),
+                positions->getZ(i)
+            );
+
+            // Calculate the distance of the point to the ray in local space
+            float distToRay = localRay.distanceToPoint(point_local);
+
+            std::cout << "Point " << i << " is within threshold! Distance: " << distToRay << "\n";
+
+            if (distToRay < threshold * worldScale) {
+                // The point is within the radius. Now find the intersection point on the ray.
+                threepp::Vector3 intersectionPoint;
+                localRay.closestPointToPoint(point_local, intersectionPoint);
+
+                // Check if the intersection point is within the ray's near and far planes.
+                float distFromRayOrigin = raycaster.ray.origin.distanceTo(intersectionPoint);
+
+                //if ( (distFromRayOrigin >= raycaster.near) && (distFromRayOrigin <= raycaster.far) )
+                if (true){
+                    threepp::Vector3 point_world;
+                    point_world.copy(point_local).applyMatrix4(*this->matrixWorld);
+
+                    // Explicitly construct the Intersection object
+                    threepp::Intersection intersection;
+                    intersection.distance = distFromRayOrigin;
+                    intersection.object = this;
+                    intersection.point = point_world;
+                    intersection.index = static_cast<int>(i);
+
+                    intersects.push_back(intersection);
+                }
+            }
+        }
+
+        std::cout << "The intersects number is " << intersects.size() << "\n";
+    }
+
+protected:
+    CustomPoints(const std::shared_ptr<threepp::BufferGeometry>& geometry,
+                 const std::shared_ptr<threepp::Material>& material)
+        : threepp::Points(geometry, material) {}
+};
+
 
 class MyApp : public wxApp
 {
@@ -289,10 +383,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     wxLogDebug("OpenGL version: %s", reinterpret_cast<const char *>(glGetString(GL_VERSION)));
     wxLogDebug("OpenGL vendor: %s", reinterpret_cast<const char *>(glGetString(GL_VENDOR)));
 
-
     glEnable(GL_PROGRAM_POINT_SIZE);
-
-    //////////////////////////////////////////////////////////////////////////////////////
 
     auto viewPortSize = GetSize() * GetContentScaleFactor();
     WindowSize size{viewPortSize.x, viewPortSize.y};
@@ -301,20 +392,28 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     scene = Scene::create();
     scene->background = Color::aliceblue;
+    scene->name = "scene";
+
     camera = PerspectiveCamera::create(75, size.aspect(), 0.1f, 1000);
     camera->position.z = 5;
+    camera->name = "mainCamera";
 
-    controls = std::make_shared<OrbitControls>(*camera, *this); // add this line
+    controls = std::make_shared<OrbitControls>(*camera, *this);
 
+#if 0
     auto box = createBox();
+    box->name = "box";
     scene->add(box);
 
     auto sphere = createSphere();
+    sphere->name = "sphereInsideBox";
     box->add(sphere);
 
     auto plane = createPlane();
+    plane->name = "plane";
     auto planeMaterial = plane->material()->as<MeshBasicMaterial>();
     scene->add(plane);
+#endif // 0
 
     WindowSize s = this->size();
 
@@ -326,11 +425,13 @@ bool OpenGLCanvas::InitializeOpenGL()
     opts1 = std::make_shared<TextGeometry::Options>(font1, 40);
     hudText1 = std::make_shared<Text2D>(*opts1, "Hello World!");
     hudText1->setColor(Color::black);
+    hudText1->name = "hudText1";
     hud->add(*hudText1, HUD::Options());
 
     opts2 = std::make_shared<TextGeometry::Options>(font2, 10, 1);
     hudText2 = std::make_shared<Text2D>(*opts1, "");
     hudText2->setColor(Color::red);
+    hudText2->name = "hudText2";
     hud->add(*hudText2, HUD::Options()
                               .setNormalizedPosition({1, 1})
                               .setHorizontalAlignment(threepp::HUD::HorizontalAlignment::RIGHT)
@@ -338,6 +439,8 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
+
+#if 0
 
     // billboard text labels
     float textSize = 0.02;
@@ -348,45 +451,42 @@ bool OpenGLCanvas::InitializeOpenGL()
     textLabelMaterial->color = Color::green;
     textLabelMaterial->sizeAttenuation = false;
 
-
     textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, textLabelMaterial));
     textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, textLabelMaterial));
 
     textMesh2dArray[0]->position.z = 5;
     textMesh2dArray[1]->position.z = -5;
 
-//    textMesh2dArray[0]->scale.set(0.05,0.05,0.05);
-//    textMesh2dArray[1]->scale.set(0.05,0.05,0.05);
-
-
     textMesh2dArray[0]->geometry()->center();
     textMesh2dArray[1]->geometry()->center();
+
+    textMesh2dArray[0]->name = "textLabelFront";
+    textMesh2dArray[1]->name = "textLabelBack";
 
     scene->add(*(textMesh2dArray[0]));
     scene->add(*(textMesh2dArray[1]));
 
-    // add 3D lines, we use line segment here
-    // Create a material for the lines
+#endif // 0
+
+#if 0
+    // add 3D lines
     auto lineMaterial = threepp::LineBasicMaterial::create();
     lineMaterial->color.setRGB(1, 0, 0);
 
-    // Create geometry for the lines
     auto lineGeometry = threepp::BufferGeometry::create();
     std::vector<float> lineVertices = {
-        -1, 0, 0,  // Start point of line 1
-        1, 0, 0,   // End point of line 1
-        0, -1, 0,  // Start point of line 2
-        0, 1, 0    // End point of line 2
+        -1, 0, 0,
+        1, 0, 0,
+        0, -1, 0,
+        0, 1, 0
     };
     lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(lineVertices, 3));
 
-    // Create the line object
     auto line = threepp::LineSegments::create(lineGeometry, lineMaterial);
+    line->name = "crossLines";
     scene->add(line);
 
-    // add 3D line segments
 
-    // Create geometry for the lines
     auto longLineGeometry = threepp::BufferGeometry::create();
     std::vector<float> longLineVertices = {
         0, 0, 0,
@@ -396,54 +496,16 @@ bool OpenGLCanvas::InitializeOpenGL()
     };
     longLineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(longLineVertices, 3));
 
-    // Create the line object
     auto line2 = threepp::Line::create(longLineGeometry, lineMaterial);
-    line2->name = "line3d";
+    line2->name = "longLine";
     scene->add(line2);
 
-
-    // axis
-
     auto axis = threepp::AxesHelper::create(5);
+    axis->name = "axisHelper";
     scene->add(axis);
 
-//    // points
-//
-//{
-//    const int numParticles = 5;
-//    std::vector<float> positions(numParticles * 3);
-//    std::vector<float> colors(numParticles * 3);
-//
-//    const float n = 10;
-//    const float n2 = n / 2;
-//
-//    for (int i = 0; i < numParticles; i++) {
-//        positions[3 * i]     = (math::randFloat() * n - n2);
-//        positions[3 * i + 1] = (math::randFloat() * n - n2);
-//        positions[3 * i + 2] = (math::randFloat() * n - n2);
-//
-//        colors[3 * i]     = (positions[3 * i] / n + 0.5f);
-//        colors[3 * i + 1] = (positions[3 * i + 1] / n + 0.5f);
-//        colors[3 * i + 2] = (positions[3 * i + 2] / n + 0.5f);
-//    }
-//
-//
-//    auto geometry = BufferGeometry::create();
-//    geometry->setAttribute("position", FloatBufferAttribute::create(positions, 3));
-//    geometry->setAttribute("color", FloatBufferAttribute::create(colors, 3));
-//
-//    geometry->computeBoundingSphere();
-//
-//    auto material = PointsMaterial::create();
-//    material->size = 0.2;
-//    material->vertexColors = true;
-//
-//    auto points = Points::create(geometry, material);
-//    scene->add(points);
-//}
 
-
-    // ticks and labels from -5 to 5
+    // ticks and labels
     auto tickMaterial = threepp::LineBasicMaterial::create();
     tickMaterial->color = threepp::Color::gray;
 
@@ -451,64 +513,41 @@ bool OpenGLCanvas::InitializeOpenGL()
     float labelOffset = 0.3f;
 
     for (float i = -5; i <= 5; i += 1.0f) {
-        // X-axis ticks
         auto xTickGeometry = threepp::BufferGeometry::create();
         xTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({i, -tickLength, 0, i, tickLength, 0}, 3));
         auto xTick = threepp::LineSegments::create(xTickGeometry, tickMaterial);
+        xTick->name = "xTick_" + std::to_string(static_cast<int>(i));
         scene->add(xTick);
 
-        // X-axis labels
-        auto xLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize), std::to_string(static_cast<int>(i)), textLabelMaterial);
-
+        auto xLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize),
+                                              std::to_string(static_cast<int>(i)), textLabelMaterial);
         xLabel->position = {i, -labelOffset, 0};
+        xLabel->name = "xLabel_" + std::to_string(static_cast<int>(i));
         scene->add(xLabel);
-
-        // Repeat the above steps for Y and Z axes
     }
 
+#endif // 0
 
-//    // ---- sample data: 5 points ----
-//    {
-//        std::vector<float> vertices = {
-//            0.0f, 0.0f, 0.0f,
-//            1.0f, 0.0f, 0.0f,
-//            0.0f, 1.0f, 0.0f,
-//            0.0f, 0.0f, 1.0f,
-//           -1.0f,-1.0f, 0.0f
-//        };
-//
-//        std::vector<float> colors = {
-//            1, 0, 0,
-//            0, 1, 0,
-//            0, 0, 1,
-//            1, 1, 0,
-//            1, 0, 1
-//        };
-//
-//        auto geometry = BufferGeometry::create();
-//        geometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
-//        geometry->setAttribute("color", FloatBufferAttribute::create(colors, 3));
-//
-//        auto material = PointsMaterial::create();
-//        material->size = 50.0f;
-//        material->sizeAttenuation = false;
-//        material->vertexColors = true;
-//
-//        auto points = Points::create(geometry, material);
-//        scene->add(points);
-//
-//    }
-//
 
 // ---- sample data: 5 points with RawShaderMaterial ----
 {
+//    std::vector<float> vertices = {
+//        0.0f, 0.0f, 0.0f,
+//        1.0f, 0.0f, 0.0f,
+//        0.0f, 1.0f, 0.0f,
+//        0.0f, 0.0f, 1.0f,
+//       -1.0f,-1.0f, 0.0f
+//    };
+
+
     std::vector<float> vertices = {
         0.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
         0.0f, 0.0f, 1.0f,
-       -1.0f,-1.0f, 0.0f
+        0.0f, 0.0f, 2.0f,
+        0.0f, 0.0f, 3.0f,
+        0.0f, 0.0f, 4.0f
     };
+
 
     std::vector<float> colors = {
         1, 0, 0, 1,
@@ -559,26 +598,25 @@ bool OpenGLCanvas::InitializeOpenGL()
     // set initial point size
     material->uniforms["pointSize"] = threepp::Uniform(10.0f);  // programmer can modify this
 
-    auto points = Points::create(geometry, material);
+    //auto points = Points::create(geometry, material);
+
+    // --- create our CustomPoints object ---
+    auto points = CustomPoints::create(geometry, material);
+
     scene->add(points);
 }
 
 
-
-float sphereRadius = 0.1f;
-auto sphereGeometry = SphereGeometry::create(sphereRadius);
-auto sphereMaterial = MeshBasicMaterial::create();
-sphereMaterial->color = Color::red;
-selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
-selectionMarker->visible = false;
-scene->add(selectionMarker);
-
-
-
-    //////////////////////////////////////////////////////////////////////////////////////
+    float sphereRadius = 0.1f;
+    auto sphereGeometry = SphereGeometry::create(sphereRadius);
+    auto sphereMaterial = MeshBasicMaterial::create();
+    sphereMaterial->color = Color::red;
+    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
+    selectionMarker->name = "selectionMarker";
+    selectionMarker->visible = false;
+    scene->add(selectionMarker);
 
     isOpenGLInitialized = true;
-
     return true;
 }
 
@@ -651,19 +689,20 @@ void OpenGLCanvas::OnMouseMove(wxMouseEvent& event)
     event.Skip();
 }
 
-void OpenGLCanvas::OnMousePress(wxMouseEvent& event) {
+void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
+{
 
     int buttonFlag = event.GetButton();
     wxPoint pos = event.GetPosition();
     int button = 0;
-    if (wxMOUSE_BTN_LEFT == buttonFlag)
+    if(wxMOUSE_BTN_LEFT == buttonFlag)
         button = 0;
-    else if (wxMOUSE_BTN_RIGHT == buttonFlag)
+    else if(wxMOUSE_BTN_RIGHT == buttonFlag)
         button = 1;
-    Vector2 p{pos.x,pos.y};
+
+    Vector2 p{static_cast<float>(pos.x), static_cast<float>(pos.y)};
     onMousePressedEvent(button, p, PeripheralsEventSource::MouseAction::PRESS);
-    Refresh (false);
-    event.Skip();
+    Refresh(false);
 
     // Convert mouse coordinates to normalized device coordinates (-1..1)
     int mouseX = event.GetX();
@@ -671,42 +710,100 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event) {
     int w, h;
     GetSize(&w, &h);
 
-    threepp::Vector2 mouse(
+    threepp::Vector2 ndcMouse(
         (2.0f * mouseX) / static_cast<float>(w) - 1.0f,
         -((2.0f * mouseY) / static_cast<float>(h) - 1.0f)
     );
 
     // Setup raycaster from camera
-    raycaster.setFromCamera(mouse, *camera);
+    raycaster.setFromCamera(ndcMouse, *camera);
 
     selectionMarker->visible = false;
     auto intersects = raycaster.intersectObjects(scene->children, true);
 
-    if (!intersects.empty()) {
+    if(!intersects.empty())
+    {
         const auto& intersect = intersects.front();
 
         // Move selection marker
         selectionMarker->position.copy(intersect.point);
         selectionMarker->visible = true;
 
+
+        std::cout << "Hit object: " << intersect.object->name;
+
+
+        if(intersect.index.has_value())
+        {
+            std::cout << " index: " << intersect.index.value();
+        }
+
+        std::cout << " point: " << intersect.point;
+
+
         // --- Highlight the clicked object ---
         threepp::Object3D* selectedObject = intersect.object;
 
-        if (auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject)) {
-            if (auto mat = std::dynamic_pointer_cast<threepp::MeshBasicMaterial>(mesh->material())) {
-                mat->color = threepp::Color::yellow;
-            }
-        }
-        else if (auto points = dynamic_cast<threepp::Points*>(selectedObject)) {
-            if (auto mat = std::dynamic_pointer_cast<threepp::PointsMaterial>(points->material())) {
-                mat->color = threepp::Color::red;
-                mat->size *= 1.5f; // make it bigger when selected
-            }
-        }
-    }
 
-    event.Skip(); // allow other handlers to run
+        std::cout << "Clicked object: "
+                  << (selectedObject->name.empty() ? "<unnamed>" : selectedObject->name)
+                  << " (type: " << typeid(*selectedObject).name() << ")"
+                  << std::endl;
+
+
+        if(auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject))
+        {
+            // Cast to MeshBasicMaterial safely
+            if(auto mat = std::dynamic_pointer_cast<threepp::MeshBasicMaterial>(mesh->material()))
+            {
+                std::cout << "Mesh clicked. Color: "
+                          << mat->color.r << ", "
+                          << mat->color.g << ", "
+                          << mat->color.b << std::endl;
+
+                mat->color = threepp::Color::yellow; // highlight on click
+            }
+        }
+        else if(auto points = dynamic_cast<threepp::Points*>(selectedObject))
+        {
+            if(auto mat = std::dynamic_pointer_cast<threepp::PointsMaterial>(points->material()))
+            {
+                std::cout << "Points clicked. Size: " << mat->size << std::endl;
+
+                if (intersect.index.has_value()) {
+                    int idx = intersect.index.value();
+
+                    // --- Get position attribute ---
+                    if (auto* posAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("position"))) {
+                        float x = posAttr->getX(idx);
+                        float y = posAttr->getY(idx);
+                        float z = posAttr->getZ(idx);
+
+                        std::cout << "Clicked point index: " << idx
+                                  << " -> position(" << x << ", " << y << ", " << z << ")";
+                    }
+
+                    // --- Get color attribute ---
+                    if (auto* colAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("color"))) {
+                        float r = colAttr->getX(idx);
+                        float g = colAttr->getY(idx);
+                        float b = colAttr->getZ(idx);
+                        float a = colAttr->getW(idx);
+
+                        std::cout << "  color(" << r << ", " << g << ", " << b << ", " << a << ")";
+                    }
+
+                    std::cout << std::endl;
+                }
+            }
+
+            Refresh(true);
+        }
+
+        event.Skip(); // allow other handlers to run
+    }
 }
+
 
 
 void OpenGLCanvas::OnMouseRelease(wxMouseEvent& event)
