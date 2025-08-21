@@ -18,90 +18,218 @@ using namespace threepp;
 #include <wx/glcanvas.h>
 
 
+// Now, undefine the problematic macros right after the include
+#ifdef near
+#undef near
+#endif
+
+#ifdef far
+#undef far
+#endif
+
+
+
+//class CustomPoints : public threepp::Points {
+//public:
+//    using Ptr = std::shared_ptr<CustomPoints>;
+//
+//    static Ptr create(const std::shared_ptr<threepp::BufferGeometry>& geometry,
+//                      const std::shared_ptr<threepp::Material>& material) {
+//        return Ptr(new CustomPoints(geometry, material));
+//    }
+//
+//    void raycast(const threepp::Raycaster& raycaster,
+//                 std::vector<threepp::Intersection>& intersects) override {
+//
+//        auto material_ptr = std::dynamic_pointer_cast<threepp::RawShaderMaterial>(this->material());
+//        if (!material_ptr) {
+//             // You could check for PointsMaterial here as a fallback
+//            auto points_material_ptr = std::dynamic_pointer_cast<threepp::PointsMaterial>(this->material());
+//            if (points_material_ptr) {
+//                 // Or just return and handle it in a different way
+//            }
+//            std::cout << "No valid material for raycasting, returning.\n";
+//            return;
+//        }
+//
+//        auto positions = geometry()->getAttribute<float>("position");
+//        if (!positions) {
+//            std::cout << "No position attribute, returning.\n";
+//            return;
+//        }
+//
+//        // Get pointSize uniform, or use a default
+//        float pointSize_px = 0.0f;
+//        if (material_ptr->uniforms.count("pointSize")) {
+//            pointSize_px = material_ptr->uniforms.at("pointSize").value<float>();
+//        } else {
+//            pointSize_px = 1.0f;
+//        }
+//
+//        // Create a temporary matrix for calculations
+//        threepp::Matrix4 tempMatrix;
+//        tempMatrix.copy(*this->matrixWorld).invert();
+//
+//        // Apply object's inverted world matrix to the ray to get it into local space
+//        threepp::Ray localRay = raycaster.ray;
+//        localRay.applyMatrix4(tempMatrix);
+//
+//        // This is a placeholder, you must get the actual height from your canvas/renderer
+//        float rendererHeight = 600.0f; // REPLACE with the actual height of your OpenGL canvas
+//
+//        for (size_t i = 0; i < positions->count(); ++i) {
+//            threepp::Vector3 point_local(
+//                positions->getX(i),
+//                positions->getY(i),
+//                positions->getZ(i)
+//            );
+//
+//            // Get the world-space position of the point
+//            threepp::Vector3 point_world;
+//            point_world.copy(point_local).applyMatrix4(*this->matrixWorld);
+//
+//            // Calculate the threshold dynamically
+//            float threshold = 0.5f; // Fallback value
+//
+//            // Use dynamic_cast for raw pointers to check the camera type
+//            auto perspectiveCamera = dynamic_cast<threepp::PerspectiveCamera*>(raycaster.camera);
+//            if (perspectiveCamera) {
+//                float distToCamera = point_world.distanceTo(raycaster.camera->position);
+//                float fov_rad = perspectiveCamera->fov * M_PI / 180.0f;
+//                threshold = (pointSize_px * distToCamera * tan(fov_rad * 0.5f)) / (rendererHeight / 2.0f);
+//            }
+//
+//            float distToRay = raycaster.ray.distanceToPoint(point_world);
+//
+//            if (distToRay < threshold) {
+//                // Find the closest point on the ray to the point in world space.
+//                threepp::Vector3 intersectionPoint;
+//                raycaster.ray.closestPointToPoint(point_world, intersectionPoint);
+//
+//                // Check if the intersection point is within the ray's near and far planes.
+//                float distFromRayOrigin = raycaster.ray.origin.distanceTo(intersectionPoint);
+//
+//                // Use parentheses to prevent macro collision with `near` and `far`
+//                if (distFromRayOrigin >= (raycaster.near) && distFromRayOrigin <= (raycaster.far)) {
+//                    threepp::Intersection intersection;
+//                    intersection.distance = distFromRayOrigin;
+//                    intersection.object = this;
+//                    intersection.point = intersectionPoint;
+//                    intersection.index = static_cast<int>(i);
+//                    intersects.push_back(intersection);
+//                }
+//            }
+//        }
+//    }
+//
+//protected:
+//    CustomPoints(const std::shared_ptr<threepp::BufferGeometry>& geometry,
+//                 const std::shared_ptr<threepp::Material>& material)
+//        : threepp::Points(geometry, material) {}
+//};
+
+
 class CustomPoints : public threepp::Points {
 public:
     using Ptr = std::shared_ptr<CustomPoints>;
 
-    static Ptr create(const std::shared_ptr<threepp::BufferGeometry>& geometry,
-                      const std::shared_ptr<threepp::Material>& material) {
+    static Ptr create(
+        const std::shared_ptr<threepp::BufferGeometry>& geometry,
+        const std::shared_ptr<threepp::Material>& material) {
         return Ptr(new CustomPoints(geometry, material));
     }
 
     void raycast(const threepp::Raycaster& raycaster,
-                 std::vector<threepp::Intersection>& intersects) override {
-
-        std::cout << "CustomPoints::raycast called for object: " << this << std::endl;
+                               std::vector<threepp::Intersection>& intersects) {
 
         auto material_ptr = std::dynamic_pointer_cast<threepp::RawShaderMaterial>(this->material());
         if (!material_ptr) {
-            std::cout << "No RawShaderMaterial, returning.\n";
             return;
         }
 
         auto positions = geometry()->getAttribute<float>("position");
         if (!positions) {
-            std::cout << "No position attribute, returning.\n";
             return;
         }
 
-        // Create a temporary Matrix4 to hold the inverted world matrix
-        threepp::Matrix4 tempMatrix;
-        tempMatrix.copy(*this->matrixWorld).invert();
+        float pointSize_px = 0.0f;
+        if (material_ptr->uniforms.count("pointSize")) {
+            pointSize_px = material_ptr->uniforms.at("pointSize").value<float>();
+        } else {
+            pointSize_px = 1.0f;
+        }
 
-        // Apply object's inverted world matrix to the ray to get it into local space
-        threepp::Ray localRay = raycaster.ray;
-        localRay.applyMatrix4(tempMatrix);
+        GLint viewport[4];
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        float rendererWidth = static_cast<float>(viewport[2]);
+        float rendererHeight = static_cast<float>(viewport[3]);
 
-        // Get the world scale from the object's matrix
-        const float worldScale = this->matrixWorld->getMaxScaleOnAxis();
-        //const float threshold = material_ptr->size / 2.0f;
+        threepp::Matrix4 pvm;
+        // --- FIX FOR THE 'OPERATOR*' ERROR ---
+        // Use .get() to retrieve the raw pointer and then dereference it.
+        // This bypasses the ambiguity the compiler is facing.
+        pvm.multiplyMatrices(raycaster.camera->projectionMatrix, raycaster.camera->matrixWorldInverse);
 
-        const float threshold = 0.5;
-
-        for (size_t i = 0; i < positions->count(); ++i) {
+        // --- FIX FOR THE SIGNEDNESS WARNING ---
+        // Cast the count() return value to size_t to make the comparison safe.
+        for (size_t i = 0; i < static_cast<size_t>(positions->count()); ++i) {
             threepp::Vector3 point_local(
                 positions->getX(i),
                 positions->getY(i),
                 positions->getZ(i)
             );
 
-            // Calculate the distance of the point to the ray in local space
-            float distToRay = localRay.distanceToPoint(point_local);
+            threepp::Vector3 point_world;
+            point_world.copy(point_local).applyMatrix4(*this->matrixWorld);
 
-            std::cout << "Point " << i << " is within threshold! Distance: " << distToRay << "\n";
+            threepp::Vector4 clipSpacePoint;
+            clipSpacePoint.set(point_world.x, point_world.y, point_world.z, 1.0f);
+            clipSpacePoint.applyMatrix4(pvm);
 
-            if (distToRay < threshold * worldScale) {
-                // The point is within the radius. Now find the intersection point on the ray.
-                threepp::Vector3 intersectionPoint;
-                localRay.closestPointToPoint(point_local, intersectionPoint);
+            threepp::Vector3 ndcPoint(
+                clipSpacePoint.x / clipSpacePoint.w,
+                clipSpacePoint.y / clipSpacePoint.w,
+                clipSpacePoint.z / clipSpacePoint.w
+            );
 
-                // Check if the intersection point is within the ray's near and far planes.
-                float distFromRayOrigin = raycaster.ray.origin.distanceTo(intersectionPoint);
+            threepp::Vector2 screenPoint(
+                (ndcPoint.x * 0.5f + 0.5f) * rendererWidth,
+                (1.0f - (ndcPoint.y * 0.5f + 0.5f)) * rendererHeight
+            );
 
-                //if ( (distFromRayOrigin >= raycaster.near) && (distFromRayOrigin <= raycaster.far) )
-                if (true){
-                    threepp::Vector3 point_world;
-                    point_world.copy(point_local).applyMatrix4(*this->matrixWorld);
+            threepp::Vector2 screenMouse(
+                (m_mouse.x * 0.5f + 0.5f) * rendererWidth,
+                (1.0f - (m_mouse.y * 0.5f + 0.5f)) * rendererHeight
+            );
 
-                    // Explicitly construct the Intersection object
+            float pixelDistance = screenPoint.distanceTo(screenMouse);
+
+            if (pixelDistance <= pointSize_px / 2.0f) {
+                if (ndcPoint.z >= -1.0f && ndcPoint.z <= 1.0f) {
                     threepp::Intersection intersection;
-                    intersection.distance = distFromRayOrigin;
+                    intersection.distance = raycaster.ray.origin.distanceTo(point_world);
                     intersection.object = this;
                     intersection.point = point_world;
                     intersection.index = static_cast<int>(i);
-
                     intersects.push_back(intersection);
                 }
             }
         }
+    }
 
-        std::cout << "The intersects number is " << intersects.size() << "\n";
+    // You need a way to set the mouse position, as the raycaster does not store it.
+    void setMousePosition(float x, float y) {
+        m_mouse.set(x, y);
     }
 
 protected:
+    // Protected constructor to enforce use of the static create method
     CustomPoints(const std::shared_ptr<threepp::BufferGeometry>& geometry,
                  const std::shared_ptr<threepp::Material>& material)
         : threepp::Points(geometry, material) {}
+
+private:
+    threepp::Vector2 m_mouse;
 };
 
 
@@ -183,6 +311,8 @@ private:
     Raycaster raycaster;
     Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
     std::shared_ptr<Mesh> selectionMarker; // e.g. a small sphere to show hit point
+
+    std::shared_ptr<CustomPoints> m_points; // Your custom object
 
     //////////////////////////////////////////////////////////////////////////////
 
@@ -601,9 +731,9 @@ bool OpenGLCanvas::InitializeOpenGL()
     //auto points = Points::create(geometry, material);
 
     // --- create our CustomPoints object ---
-    auto points = CustomPoints::create(geometry, material);
+    m_points = CustomPoints::create(geometry, material);
 
-    scene->add(points);
+    scene->add(m_points);
 }
 
 
@@ -704,7 +834,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     onMousePressedEvent(button, p, PeripheralsEventSource::MouseAction::PRESS);
     Refresh(false);
 
-    // Convert mouse coordinates to normalized device coordinates (-1..1)
+     // Convert mouse coordinates to normalized device coordinates (-1..1)
     int mouseX = event.GetX();
     int mouseY = event.GetY();
     int w, h;
@@ -715,10 +845,17 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
         -((2.0f * mouseY) / static_cast<float>(h) - 1.0f)
     );
 
+    // --- NEW: Feed the custom points object the mouse position
+    // This is the one line that enables your custom raycasting logic to work
+    if (auto customPoints = std::dynamic_pointer_cast<CustomPoints>(m_points)) {
+        customPoints->setMousePosition(ndcMouse.x, ndcMouse.y);
+    }
+
     // Setup raycaster from camera
     raycaster.setFromCamera(ndcMouse, *camera);
 
     selectionMarker->visible = false;
+    // This call will automatically trigger your overridden CustomPoints::raycast method
     auto intersects = raycaster.intersectObjects(scene->children, true);
 
     if(!intersects.empty())
@@ -746,9 +883,9 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
 
 
         std::cout << "Clicked object: "
-                  << (selectedObject->name.empty() ? "<unnamed>" : selectedObject->name)
-                  << " (type: " << typeid(*selectedObject).name() << ")"
-                  << std::endl;
+                 << (selectedObject->name.empty() ? "<unnamed>" : selectedObject->name)
+                 << " (type: " << typeid(*selectedObject).name() << ")"
+                 << std::endl;
 
 
         if(auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject))
@@ -780,7 +917,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
                         float z = posAttr->getZ(idx);
 
                         std::cout << "Clicked point index: " << idx
-                                  << " -> position(" << x << ", " << y << ", " << z << ")";
+                                 << " -> position(" << x << ", " << y << ", " << z << ")";
                     }
 
                     // --- Get color attribute ---
