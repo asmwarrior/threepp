@@ -310,7 +310,7 @@ private:
     // For object picking
     Raycaster raycaster;
     Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
-//    std::shared_ptr<Mesh> selectionMarker; // e.g. a small sphere to show hit point
+    std::shared_ptr<Mesh> selectionMarker; // e.g. a small sphere to show hit point
 
     std::shared_ptr<CustomPoints> m_points; // Your custom object
 
@@ -740,13 +740,14 @@ bool OpenGLCanvas::InitializeOpenGL()
     float sphereRadius = 0.1f;
     auto sphereGeometry = SphereGeometry::create(sphereRadius);
     auto sphereMaterial = MeshBasicMaterial::create();
+    sphereMaterial->wireframe = true;
     sphereMaterial->color = Color::red;
 
 
-//    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
-//    selectionMarker->name = "selectionMarker";
-//    selectionMarker->visible = false;
-//    scene->add(selectionMarker);
+    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
+    selectionMarker->name = "selectionMarker";
+    selectionMarker->visible = false;
+    scene->add(selectionMarker);
 
     isOpenGLInitialized = true;
     return true;
@@ -856,97 +857,113 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     // Setup raycaster from camera
     raycaster.setFromCamera(ndcMouse, *camera);
 
-//    selectionMarker->visible = false;
+    selectionMarker->visible = false;
     // This call will automatically trigger your overridden CustomPoints::raycast method
     auto intersects = raycaster.intersectObjects(scene->children, true);
 
     if(!intersects.empty())
     {
-        const auto& intersect = intersects.front();
-
-//        // Move selection marker
-//        selectionMarker->position.copy(intersect.point);
-//        selectionMarker->visible = true;
-
-
-        std::cout << "Hit object: " << intersect.object->name;
-
-
-        if(intersect.index.has_value())
-        {
-            std::cout << " index: " << intersect.index.value();
-        }
-
-        std::cout << " point: " << intersect.point;
-
-
-        // --- Highlight the clicked object ---
-        threepp::Object3D* selectedObject = intersect.object;
-
-
-        std::cout << "Clicked object: "
-                 << (selectedObject->name.empty() ? "<unnamed>" : selectedObject->name)
-                 << " (type: " << typeid(*selectedObject).name() << ")"
-                 << std::endl;
-
-
-        if(auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject))
-        {
-            // Cast to MeshBasicMaterial safely
-            if(auto mat = std::dynamic_pointer_cast<threepp::MeshBasicMaterial>(mesh->material()))
-            {
-                std::cout << "Mesh clicked. Color: "
-                          << mat->color.r << ", "
-                          << mat->color.g << ", "
-                          << mat->color.b << std::endl;
-
-                mat->color = threepp::Color::yellow; // highlight on click
+        // --- Find the first intersection that is not the selection marker
+        const threepp::Intersection* firstValidIntersect = nullptr;
+        for (const auto& intersect : intersects) {
+            if (intersect.object != selectionMarker.get()) {
+                firstValidIntersect = &intersect;
+                break;
             }
         }
-        else if(auto points = dynamic_cast<threepp::Points*>(selectedObject))
+
+        // --- Only proceed if a valid intersection was found
+        if(firstValidIntersect != nullptr)
         {
-            // --- FIX: Cast to RawShaderMaterial, not PointsMaterial ---
-            if(auto mat = std::dynamic_pointer_cast<threepp::RawShaderMaterial>(points->material()))
+            const auto& intersect = *firstValidIntersect;
+
+            // Move selection marker
+            selectionMarker->position.copy(intersect.point);
+            selectionMarker->visible = true;
+
+
+            std::cout << "Hit object: " << intersect.object->name;
+
+
+            if(intersect.index.has_value())
             {
-                // The pointSize is a uniform, not a direct material property
-                float size = mat->uniforms.at("pointSize").value<float>();
-                std::cout << "Points clicked. Size: " << size << std::endl;
+                std::cout << " index: " << intersect.index.value();
+            }
 
-                if (intersect.index.has_value()) {
-                    int idx = intersect.index.value();
+            std::cout << " point: " << intersect.point;
 
-                    // --- Get position attribute ---
-                    if (auto* posAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("position"))) {
-                        float x = posAttr->getX(idx);
-                        float y = posAttr->getY(idx);
-                        float z = posAttr->getZ(idx);
 
-                        std::cout << "Clicked point index: " << idx
-                                 << " -> position(" << x << ", " << y << ", " << z << ")";
-                    }
+            // --- Highlight the clicked object ---
+            threepp::Object3D* selectedObject = intersect.object;
 
-                    // --- Get color attribute ---
-                    if (auto* colAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("color"))) {
-                        float r = colAttr->getX(idx);
-                        float g = colAttr->getY(idx);
-                        float b = colAttr->getZ(idx);
-                        float a = colAttr->getW(idx); // Your attribute has 4 components
 
-                        std::cout << "  color(" << r << ", " << g << ", " << b << ", " << a << ")" << std::endl;
+            std::cout << "Clicked object: "
+                      << (selectedObject->name.empty() ? "<unnamed>" : selectedObject->name)
+                      << " (type: " << typeid(*selectedObject).name() << ")"
+                      << std::endl;
 
-                        // --- Change the point's color to yellow
-                        threepp::Color newColor(1.0f, 1.0f, 0.0f); // Yellow
-                        colAttr->setXYZ(idx, newColor.r, newColor.g, newColor.b);
 
-                        // IMPORTANT: Tell the attribute that its data has changed
-                        colAttr->needsUpdate();
-                    }
+            if(auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject))
+            {
+                // Cast to MeshBasicMaterial safely
+                if(auto mat = std::dynamic_pointer_cast<threepp::MeshBasicMaterial>(mesh->material()))
+                {
+                    std::cout << "Mesh clicked. Color: "
+                              << mat->color.r << ", "
+                              << mat->color.g << ", "
+                              << mat->color.b << std::endl;
 
-                    std::cout << std::endl;
+                    mat->color = threepp::Color::yellow; // highlight on click
                 }
             }
+            else if(auto points = dynamic_cast<threepp::Points*>(selectedObject))
+            {
+                // --- FIX: Cast to RawShaderMaterial, not PointsMaterial ---
+                if(auto mat = std::dynamic_pointer_cast<threepp::RawShaderMaterial>(points->material()))
+                {
+                    // The pointSize is a uniform, not a direct material property
+                    float size = mat->uniforms.at("pointSize").value<float>();
+                    std::cout << "Points clicked. Size: " << size << std::endl;
 
-            Refresh(true);
+                    if(intersect.index.has_value())
+                    {
+                        int idx = intersect.index.value();
+
+                        // --- Get position attribute ---
+                        if(auto* posAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("position")))
+                        {
+                            float x = posAttr->getX(idx);
+                            float y = posAttr->getY(idx);
+                            float z = posAttr->getZ(idx);
+
+                            std::cout << "Clicked point index: " << idx
+                                      << " -> position(" << x << ", " << y << ", " << z << ")";
+                        }
+
+                        // --- Get color attribute ---
+                        if(auto* colAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("color")))
+                        {
+                            float r = colAttr->getX(idx);
+                            float g = colAttr->getY(idx);
+                            float b = colAttr->getZ(idx);
+                            float a = colAttr->getW(idx); // Your attribute has 4 components
+
+                            std::cout << "  color(" << r << ", " << g << ", " << b << ", " << a << ")" << std::endl;
+
+//                        // --- Change the point's color to yellow
+//                        threepp::Color newColor(1.0f, 1.0f, 0.0f); // Yellow
+//                        colAttr->setXYZ(idx, newColor.r, newColor.g, newColor.b);
+//
+//                        // IMPORTANT: Tell the attribute that its data has changed
+//                        colAttr->needsUpdate();
+                        }
+
+                        std::cout << std::endl;
+                    }
+                }
+
+                Refresh(true);
+            }
         }
 
         event.Skip(); // allow other handlers to run
