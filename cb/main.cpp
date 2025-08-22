@@ -312,6 +312,8 @@ private:
     Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
     std::shared_ptr<Points> selectionMarker; // e.g. a small sphere to show hit point
 
+    std::shared_ptr<threepp::Text2D> textLabel;
+
     std::shared_ptr<CustomPoints> m_points; // Your custom object
 
     //////////////////////////////////////////////////////////////////////////////
@@ -805,6 +807,23 @@ selectionMarker->visible = false;
 scene->add(selectionMarker);
 
 
+// --- NEW: Create the dynamic text label
+const auto textLabelMaterial = SpriteMaterial::create();
+textLabelMaterial->side = Side::Double;
+textLabelMaterial->color = Color::black; // Match the marker color
+textLabelMaterial->sizeAttenuation = false;
+
+// Create a single Text2D object with placeholder text
+textLabel = Text2D::create(TextGeometry::Options(font2, 0.02f), "Ready", textLabelMaterial);
+// Adjust these values to find the perfect position for your scene
+textLabel->position.set(-0.1f, -0.1f, -0.1f);
+textLabel->visible = false; // Hide it initially
+
+// Make the label a child of the marker so it moves with it
+// selectionMarker->add(*textLabel);
+scene->add(*textLabel); // Add the label to the scene as a separate object
+
+
 
 
     isOpenGLInitialized = true;
@@ -940,6 +959,51 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
             selectionMarker->visible = true;
 
 
+            // Get the coordinates of the selected point
+            std::stringstream ss;
+            ss << "x:" << std::fixed << std::setprecision(2) << intersect.point.x;
+            ss << "\ny:" << std::fixed << std::setprecision(2) << intersect.point.y;
+            ss << "\nz:" << std::fixed << std::setprecision(2) << intersect.point.z;
+            std::string text = ss.str();
+
+            // --- Update the label's text
+            textLabel->setText(text); // This is an assumed method. Check your threepp docs for Text2D
+            textLabel->visible = true; // Make the label visible
+
+// --- NEW: Calculate the label's position with a fixed PIXEL offset ---
+
+            // Get the dimensions of your canvas in pixels
+            int w, h;
+            GetSize(&w, &h);
+
+            // 1. Create a Vector3 from the intersection point
+            threepp::Vector3 projectedPoint = intersect.point;
+
+            // 2. Project the 3D point to Normalized Device Coordinates (NDC)
+            projectedPoint.project(*camera);
+
+            // 3. Convert NDC to pixel coordinates and add the desired pixel offset
+            // NOTE: positive X is right, negative Y is down
+            float pixelOffsetX = 20.0f; // Adjust these pixel values as needed
+            float pixelOffsetY = -20.0f;
+
+            float pixelX = ((projectedPoint.x + 1.0f) * 0.5f) * static_cast<float>(w) + pixelOffsetX;
+            float pixelY = ((projectedPoint.y + 1.0f) * 0.5f) * static_cast<float>(h) + pixelOffsetY;
+
+            // 4. Convert back to NDC coordinates
+            threepp::Vector3 unprojectedPoint;
+            unprojectedPoint.x = (pixelX / static_cast<float>(w)) * 2.0f - 1.0f;
+            unprojectedPoint.y = (pixelY / static_cast<float>(h)) * 2.0f - 1.0f;
+            unprojectedPoint.z = projectedPoint.z; // Keep the same depth
+
+
+            // 5. Unproject the new NDC vector to get its 3D world position
+            unprojectedPoint.unproject(*camera);
+
+            // 6. Set the label's position to the newly calculated position
+            textLabel->position.copy(unprojectedPoint);
+
+
             std::cout << "Hit object: " << intersect.object->name;
 
 
@@ -1022,6 +1086,13 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
 
                 Refresh(true);
             }
+        }
+        else
+        {
+                    // If no intersection was found, hide the marker and the label
+            selectionMarker->visible = false;
+            textLabel->visible = false;
+
         }
 
         event.Skip(); // allow other handlers to run
