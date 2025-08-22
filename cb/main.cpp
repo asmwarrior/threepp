@@ -498,22 +498,22 @@ bool OpenGLCanvas::InitializeOpenGLFunctions()
 
 bool OpenGLCanvas::InitializeOpenGL()
 {
-    if (!openGLContext)
+    if(!openGLContext)
     {
         return false;
     }
 
     SetCurrent(*openGLContext);
 
-    if (!InitializeOpenGLFunctions())
+    if(!InitializeOpenGLFunctions())
     {
         wxMessageBox("Error: Could not initialize OpenGL function pointers.",
                      "OpenGL initialization error", wxOK | wxICON_INFORMATION, this);
         return false;
     }
 
-    wxLogDebug("OpenGL version: %s", reinterpret_cast<const char *>(glGetString(GL_VERSION)));
-    wxLogDebug("OpenGL vendor: %s", reinterpret_cast<const char *>(glGetString(GL_VENDOR)));
+    wxLogDebug("OpenGL version: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+    wxLogDebug("OpenGL vendor: %s", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
 
     glEnable(GL_PROGRAM_POINT_SIZE);
 
@@ -565,9 +565,9 @@ bool OpenGLCanvas::InitializeOpenGL()
     hudText2->setColor(Color::red);
     hudText2->name = "hudText2";
     hud->add(*hudText2, HUD::Options()
-                              .setNormalizedPosition({1, 1})
-                              .setHorizontalAlignment(threepp::HUD::HorizontalAlignment::RIGHT)
-                              .setVerticalAlignment(threepp::HUD::VerticalAlignment::TOP));
+             .setNormalizedPosition({1, 1})
+             .setHorizontalAlignment(threepp::HUD::HorizontalAlignment::RIGHT)
+             .setVerticalAlignment(threepp::HUD::VerticalAlignment::TOP));
 
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
@@ -606,12 +606,13 @@ bool OpenGLCanvas::InitializeOpenGL()
     lineMaterial->color.setRGB(1, 0, 0);
 
     auto lineGeometry = threepp::BufferGeometry::create();
-    std::vector<float> lineVertices = {
+    std::vector<float> lineVertices =
+    {
         -1, 0, 0,
-        1, 0, 0,
-        0, -1, 0,
-        0, 1, 0
-    };
+            1, 0, 0,
+            0, -1, 0,
+            0, 1, 0
+        };
     lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(lineVertices, 3));
 
     auto line = threepp::LineSegments::create(lineGeometry, lineMaterial);
@@ -620,7 +621,8 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
     auto longLineGeometry = threepp::BufferGeometry::create();
-    std::vector<float> longLineVertices = {
+    std::vector<float> longLineVertices =
+    {
         0, 0, 0,
         1, 1, 2,
         2, 3, 4,
@@ -644,7 +646,8 @@ bool OpenGLCanvas::InitializeOpenGL()
     float tickLength = 0.2f;
     float labelOffset = 0.3f;
 
-    for (float i = -5; i <= 5; i += 1.0f) {
+    for(float i = -5; i <= 5; i += 1.0f)
+    {
         auto xTickGeometry = threepp::BufferGeometry::create();
         xTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({i, -tickLength, 0, i, tickLength, 0}, 3));
         auto xTick = threepp::LineSegments::create(xTickGeometry, tickMaterial);
@@ -662,7 +665,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
 // ---- sample data: 5 points with RawShaderMaterial ----
-{
+    {
 //    std::vector<float> vertices = {
 //        0.0f, 0.0f, 0.0f,
 //        1.0f, 0.0f, 0.0f,
@@ -672,29 +675,31 @@ bool OpenGLCanvas::InitializeOpenGL()
 //    };
 
 
-    std::vector<float> vertices = {
-        0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 2.0f,
-        0.0f, 0.0f, 3.0f,
-        0.0f, 0.0f, 4.0f
-    };
+        std::vector<float> vertices =
+        {
+            0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f,
+            0.0f, 0.0f, 2.0f,
+            0.0f, 0.0f, 3.0f,
+            0.0f, 0.0f, 4.0f
+        };
 
 
-    std::vector<float> colors = {
-        1, 0, 0, 1,
-        0, 1, 0, 1,
-        0, 0, 1, 1,
-        1, 1, 0, 1,
-        1, 0, 1, 1
-    };
+        std::vector<float> colors =
+        {
+            1, 0, 0, 1,
+            0, 1, 0, 1,
+            0, 0, 1, 1,
+            1, 1, 0, 1,
+            1, 0, 1, 1
+        };
 
-    auto geometry = BufferGeometry::create();
-    geometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
-    geometry->setAttribute("color", FloatBufferAttribute::create(colors, 4));
+        auto geometry = BufferGeometry::create();
+        geometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
+        geometry->setAttribute("color", FloatBufferAttribute::create(colors, 4));
 
-    auto material = RawShaderMaterial::create();
-    material->vertexShader = R"(
+        auto material = RawShaderMaterial::create();
+        material->vertexShader = R"(
         #version 330 core
         #define attribute in
         #define varying out
@@ -711,7 +716,7 @@ bool OpenGLCanvas::InitializeOpenGL()
         }
     )";
 
-    material->fragmentShader = R"(
+        material->fragmentShader = R"(
         #version 330 core
         #define varying in
         out vec4 pc_fragColor;
@@ -724,19 +729,19 @@ bool OpenGLCanvas::InitializeOpenGL()
         }
     )";
 
-    material->side = Side::Double;
-    material->transparent = false;
+        material->side = Side::Double;
+        material->transparent = false;
 
-    // set initial point size
-    material->uniforms["pointSize"] = threepp::Uniform(10.0f);  // programmer can modify this
+        // set initial point size
+        material->uniforms["pointSize"] = threepp::Uniform(10.0f);  // programmer can modify this
 
-    //auto points = Points::create(geometry, material);
+        //auto points = Points::create(geometry, material);
 
-    // --- create our CustomPoints object ---
-    m_points = CustomPoints::create(geometry, material);
+        // --- create our CustomPoints object ---
+        m_points = CustomPoints::create(geometry, material);
 
-    scene->add(m_points);
-}
+        scene->add(m_points);
+    }
 
 
 //    float sphereRadius = 0.1f;
@@ -754,15 +759,15 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
 // --- Create a geometry for a single point ---
-std::vector<float> vertices = { 0.0f, 0.0f, 0.0f };
-auto markerGeometry = threepp::BufferGeometry::create();
-markerGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(vertices, 3));
+    std::vector<float> vertices = { 0.0f, 0.0f, 0.0f };
+    auto markerGeometry = threepp::BufferGeometry::create();
+    markerGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(vertices, 3));
 
 // --- Create a material for the marker
 // You can reuse your existing RawShaderMaterial and just change its uniforms
 // It's probably best to create a new instance to avoid affecting your main point cloud
-auto markerMaterial = threepp::RawShaderMaterial::create();
-markerMaterial->vertexShader = R"(
+    auto markerMaterial = threepp::RawShaderMaterial::create();
+    markerMaterial->vertexShader = R"(
     #version 330 core
     #define attribute in
     #define varying out
@@ -775,7 +780,7 @@ markerMaterial->vertexShader = R"(
         gl_PointSize = pointSize;
     }
 )";
-markerMaterial->fragmentShader = R"(
+    markerMaterial->fragmentShader = R"(
     #version 330 core
     out vec4 pc_fragColor;
     #define gl_FragColor pc_fragColor
@@ -796,32 +801,32 @@ markerMaterial->fragmentShader = R"(
         gl_FragColor = markerColor;
     }
 )";
-markerMaterial->uniforms["pointSize"] = threepp::Uniform(20.0f); // Make it a bit larger
-// Explicitly create a 4-component vector for the uniform
-markerMaterial->uniforms["markerColor"] = threepp::Uniform(threepp::Vector4(0.0f, 0.0f, 0.0f, 1.0f)); // black with full opacity
-markerMaterial->uniforms["ringThickness"] = threepp::Uniform(0.2f); // Adjust the thickness (0.0 to 1.0)
+    markerMaterial->uniforms["pointSize"] = threepp::Uniform(20.0f); // Make it a bit larger
+    // Explicitly create a 4-component vector for the uniform
+    markerMaterial->uniforms["markerColor"] = threepp::Uniform(threepp::Vector4(0.0f, 0.0f, 0.0f, 1.0f)); // black with full opacity
+    markerMaterial->uniforms["ringThickness"] = threepp::Uniform(0.2f); // Adjust the thickness (0.0 to 1.0)
 
-// --- Create the marker as a Points object ---
-selectionMarker = threepp::Points::create(markerGeometry, markerMaterial);
-selectionMarker->visible = false;
-scene->add(selectionMarker);
+    // --- Create the marker as a Points object ---
+    selectionMarker = threepp::Points::create(markerGeometry, markerMaterial);
+    selectionMarker->visible = false;
+    scene->add(selectionMarker);
 
 
-// --- NEW: Create the dynamic text label
-const auto textLabelMaterial = SpriteMaterial::create();
-textLabelMaterial->side = Side::Double;
-textLabelMaterial->color = Color::black; // Match the marker color
-textLabelMaterial->sizeAttenuation = false;
+    // --- NEW: Create the dynamic text label
+    const auto textLabelMaterial = SpriteMaterial::create();
+    textLabelMaterial->side = Side::Double;
+    textLabelMaterial->color = Color::black; // Match the marker color
+    textLabelMaterial->sizeAttenuation = false;
 
-// Create a single Text2D object with placeholder text
-textLabel = Text2D::create(TextGeometry::Options(font2, 0.02f), "Ready", textLabelMaterial);
-// Adjust these values to find the perfect position for your scene
-textLabel->position.set(-0.1f, -0.1f, -0.1f);
-textLabel->visible = false; // Hide it initially
+    // Create a single Text2D object with placeholder text
+    textLabel = Text2D::create(TextGeometry::Options(font2, 0.02f), "Ready", textLabelMaterial);
+    // Adjust these values to find the perfect position for your scene
+    textLabel->position.set(-0.1f, -0.1f, -0.1f);
+    textLabel->visible = false; // Hide it initially
 
-// Make the label a child of the marker so it moves with it
-// selectionMarker->add(*textLabel);
-scene->add(*textLabel); // Add the label to the scene as a separate object
+    // Make the label a child of the marker so it moves with it
+    // selectionMarker->add(*textLabel);
+    scene->add(*textLabel); // Add the label to the scene as a separate object
 
 
 
