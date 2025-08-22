@@ -813,23 +813,27 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
     // --- NEW: Create the dynamic text label
+    // Create the dynamic text label
     const auto textLabelMaterial = SpriteMaterial::create();
     textLabelMaterial->side = Side::Double;
     textLabelMaterial->color = Color::black; // Match the marker color
     textLabelMaterial->sizeAttenuation = false;
 
-    // Create a single Text2D object with placeholder text
+    // Disable depth testing and writing for the material (this is correct)
+    textLabelMaterial->depthTest = false;
+    textLabelMaterial->depthWrite = false;
+
+
     textLabel = Text2D::create(TextGeometry::Options(font2, 0.02f), "Ready", textLabelMaterial);
-    // Adjust these values to find the perfect position for your scene
-    textLabel->position.set(-0.1f, -0.1f, -0.1f);
-    textLabel->visible = false; // Hide it initially
+    textLabel->position.set(0, 0.2f, 0);
+    textLabel->visible = false;
+
+    // --- CORRECT: Set renderOrder on the object itself, not the material
+    textLabel->renderOrder = 999;
 
     // Make the label a child of the marker so it moves with it
     // selectionMarker->add(*textLabel);
     scene->add(*textLabel); // Add the label to the scene as a separate object
-
-
-
 
     isOpenGLInitialized = true;
     return true;
