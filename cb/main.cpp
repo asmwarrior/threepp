@@ -310,7 +310,7 @@ private:
     // For object picking
     Raycaster raycaster;
     Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
-    std::shared_ptr<Mesh> selectionMarker; // e.g. a small sphere to show hit point
+    std::shared_ptr<Points> selectionMarker; // e.g. a small sphere to show hit point
 
     std::shared_ptr<CustomPoints> m_points; // Your custom object
 
@@ -737,17 +737,75 @@ bool OpenGLCanvas::InitializeOpenGL()
 }
 
 
-    float sphereRadius = 0.1f;
-    auto sphereGeometry = SphereGeometry::create(sphereRadius);
-    auto sphereMaterial = MeshBasicMaterial::create();
-    sphereMaterial->wireframe = true;
-    sphereMaterial->color = Color::red;
+//    float sphereRadius = 0.1f;
+//    // auto sphereGeometry = SphereGeometry::create(sphereRadius);
+//    auto sphereGeometry = threepp::BoxGeometry::create(1.0f, 1.0f, 1.0f);
+//    auto sphereMaterial = MeshBasicMaterial::create();
+//    sphereMaterial->wireframe = true;
+//    sphereMaterial->color = Color::red;
+//
+//
+//    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
+//    selectionMarker->name = "selectionMarker";
+//    selectionMarker->visible = false;
+//    scene->add(selectionMarker);
 
 
-    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
-    selectionMarker->name = "selectionMarker";
-    selectionMarker->visible = false;
-    scene->add(selectionMarker);
+// --- Create a geometry for a single point ---
+std::vector<float> vertices = { 0.0f, 0.0f, 0.0f };
+auto markerGeometry = threepp::BufferGeometry::create();
+markerGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(vertices, 3));
+
+// --- Create a material for the marker
+// You can reuse your existing RawShaderMaterial and just change its uniforms
+// It's probably best to create a new instance to avoid affecting your main point cloud
+auto markerMaterial = threepp::RawShaderMaterial::create();
+markerMaterial->vertexShader = R"(
+    #version 330 core
+    #define attribute in
+    #define varying out
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+    uniform float pointSize;
+    attribute vec3 position;
+    void main() {
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = pointSize;
+    }
+)";
+markerMaterial->fragmentShader = R"(
+    #version 330 core
+    out vec4 pc_fragColor;
+    #define gl_FragColor pc_fragColor
+    uniform vec4 markerColor;
+    uniform float ringThickness; // New uniform to control the ring thickness
+    void main() {
+        vec2 coord = 2.0 * gl_PointCoord - 1.0;
+        float dist = dot(coord, coord);
+        float outerRadius = 1.0; // The outer edge of the point
+        float innerRadius = outerRadius - ringThickness;
+
+        // Discard fragments outside the outer radius
+        if (dist > outerRadius * outerRadius) discard;
+
+        // Discard fragments inside the inner radius
+        if (dist < innerRadius * innerRadius) discard;
+
+        gl_FragColor = markerColor;
+    }
+)";
+markerMaterial->uniforms["pointSize"] = threepp::Uniform(20.0f); // Make it a bit larger
+// Explicitly create a 4-component vector for the uniform
+markerMaterial->uniforms["markerColor"] = threepp::Uniform(threepp::Vector4(0.0f, 0.0f, 0.0f, 1.0f)); // black with full opacity
+markerMaterial->uniforms["ringThickness"] = threepp::Uniform(0.2f); // Adjust the thickness (0.0 to 1.0)
+
+// --- Create the marker as a Points object ---
+selectionMarker = threepp::Points::create(markerGeometry, markerMaterial);
+selectionMarker->visible = false;
+scene->add(selectionMarker);
+
+
+
 
     isOpenGLInitialized = true;
     return true;
