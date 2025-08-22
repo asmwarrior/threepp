@@ -310,7 +310,7 @@ private:
     // For object picking
     Raycaster raycaster;
     Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
-    std::shared_ptr<Mesh> selectionMarker; // e.g. a small sphere to show hit point
+//    std::shared_ptr<Mesh> selectionMarker; // e.g. a small sphere to show hit point
 
     std::shared_ptr<CustomPoints> m_points; // Your custom object
 
@@ -741,10 +741,12 @@ bool OpenGLCanvas::InitializeOpenGL()
     auto sphereGeometry = SphereGeometry::create(sphereRadius);
     auto sphereMaterial = MeshBasicMaterial::create();
     sphereMaterial->color = Color::red;
-    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
-    selectionMarker->name = "selectionMarker";
-    selectionMarker->visible = false;
-    scene->add(selectionMarker);
+
+
+//    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
+//    selectionMarker->name = "selectionMarker";
+//    selectionMarker->visible = false;
+//    scene->add(selectionMarker);
 
     isOpenGLInitialized = true;
     return true;
@@ -854,7 +856,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     // Setup raycaster from camera
     raycaster.setFromCamera(ndcMouse, *camera);
 
-    selectionMarker->visible = false;
+//    selectionMarker->visible = false;
     // This call will automatically trigger your overridden CustomPoints::raycast method
     auto intersects = raycaster.intersectObjects(scene->children, true);
 
@@ -862,9 +864,9 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     {
         const auto& intersect = intersects.front();
 
-        // Move selection marker
-        selectionMarker->position.copy(intersect.point);
-        selectionMarker->visible = true;
+//        // Move selection marker
+//        selectionMarker->position.copy(intersect.point);
+//        selectionMarker->visible = true;
 
 
         std::cout << "Hit object: " << intersect.object->name;
@@ -903,9 +905,12 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
         }
         else if(auto points = dynamic_cast<threepp::Points*>(selectedObject))
         {
-            if(auto mat = std::dynamic_pointer_cast<threepp::PointsMaterial>(points->material()))
+            // --- FIX: Cast to RawShaderMaterial, not PointsMaterial ---
+            if(auto mat = std::dynamic_pointer_cast<threepp::RawShaderMaterial>(points->material()))
             {
-                std::cout << "Points clicked. Size: " << mat->size << std::endl;
+                // The pointSize is a uniform, not a direct material property
+                float size = mat->uniforms.at("pointSize").value<float>();
+                std::cout << "Points clicked. Size: " << size << std::endl;
 
                 if (intersect.index.has_value()) {
                     int idx = intersect.index.value();
@@ -925,9 +930,16 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
                         float r = colAttr->getX(idx);
                         float g = colAttr->getY(idx);
                         float b = colAttr->getZ(idx);
-                        float a = colAttr->getW(idx);
+                        float a = colAttr->getW(idx); // Your attribute has 4 components
 
-                        std::cout << "  color(" << r << ", " << g << ", " << b << ", " << a << ")";
+                        std::cout << "  color(" << r << ", " << g << ", " << b << ", " << a << ")" << std::endl;
+
+                        // --- Change the point's color to yellow
+                        threepp::Color newColor(1.0f, 1.0f, 0.0f); // Yellow
+                        colAttr->setXYZ(idx, newColor.r, newColor.g, newColor.b);
+
+                        // IMPORTANT: Tell the attribute that its data has changed
+                        colAttr->needsUpdate();
                     }
 
                     std::cout << std::endl;
