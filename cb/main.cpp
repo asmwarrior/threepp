@@ -572,7 +572,9 @@ bool OpenGLCanvas::InitializeOpenGL()
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
 
-#if 0
+
+    {
+#if 1
 
     // billboard text labels
     float textSize = 0.02;
@@ -598,7 +600,9 @@ bool OpenGLCanvas::InitializeOpenGL()
     scene->add(*(textMesh2dArray[0]));
     scene->add(*(textMesh2dArray[1]));
 
-#endif // 0
+#endif // 1
+    }
+
 
 #if 0
     // add 3D lines
@@ -634,10 +638,15 @@ bool OpenGLCanvas::InitializeOpenGL()
     line2->name = "longLine";
     scene->add(line2);
 
-    auto axis = threepp::AxesHelper::create(5);
-    axis->name = "axisHelper";
-    scene->add(axis);
+#endif // 0
 
+
+
+{
+auto axis = threepp::AxesHelper::create(5);
+    axis->name = "axisHelper";
+    //axis->raycast = [](const auto&, const auto&, auto&) {}; // Disable raycasting on it
+    scene->add(axis);
 
     // ticks and labels
     auto tickMaterial = threepp::LineBasicMaterial::create();
@@ -645,6 +654,13 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     float tickLength = 0.2f;
     float labelOffset = 0.3f;
+
+    float textSize = 0.02;
+
+    const auto textLabelMaterial = SpriteMaterial::create();
+    textLabelMaterial->side = Side::Double;
+    textLabelMaterial->color = Color::green;
+    textLabelMaterial->sizeAttenuation = false;
 
     for(float i = -5; i <= 5; i += 1.0f)
     {
@@ -660,8 +676,9 @@ bool OpenGLCanvas::InitializeOpenGL()
         xLabel->name = "xLabel_" + std::to_string(static_cast<int>(i));
         scene->add(xLabel);
     }
+}
 
-#endif // 0
+
 
 
 // ---- sample data: 5 points with RawShaderMaterial ----
@@ -944,15 +961,29 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     raycaster.setFromCamera(ndcMouse, *camera);
 
     selectionMarker->visible = false;
-    // This call will automatically trigger your overridden CustomPoints::raycast method
-    auto intersects = raycaster.intersectObjects(scene->children, true);
+
+    // --- OPTIMIZATION: Raycast only against the custom points object
+    // Create a vector of RAW pointers to pass to the raycaster
+    std::vector<threepp::Object3D*> objectsToRaycast = { m_points.get() };
+
+    // Pass the vector of raw pointers to intersectObjects
+    auto intersects = raycaster.intersectObjects(objectsToRaycast, true);
 
     if(!intersects.empty())
     {
-        // --- Find the first intersection that is not the selection marker
+//        // --- Find the first intersection that is not the selection marker
+//        const threepp::Intersection* firstValidIntersect = nullptr;
+//        for (const auto& intersect : intersects) {
+//            if (intersect.object != selectionMarker.get()) {
+//                firstValidIntersect = &intersect;
+//                break;
+//            }
+//        }
+
+        // --- Find the first intersection that is not the selection marker OR the axes helper
         const threepp::Intersection* firstValidIntersect = nullptr;
         for (const auto& intersect : intersects) {
-            if (intersect.object != selectionMarker.get()) {
+            if (intersect.object != selectionMarker.get() && intersect.object->name != "AxesHelper") {
                 firstValidIntersect = &intersect;
                 break;
             }
