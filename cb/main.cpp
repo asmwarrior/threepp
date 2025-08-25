@@ -992,23 +992,8 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
 
     if(!intersects.empty())
     {
-//        // --- Find the first intersection that is not the selection marker
-//        const threepp::Intersection* firstValidIntersect = nullptr;
-//        for (const auto& intersect : intersects) {
-//            if (intersect.object != selectionMarker.get()) {
-//                firstValidIntersect = &intersect;
-//                break;
-//            }
-//        }
-
-        // --- Find the first intersection that is not the selection marker OR the axes helper
-        const threepp::Intersection* firstValidIntersect = nullptr;
-        for (const auto& intersect : intersects) {
-            if (intersect.object != selectionMarker.get() && intersect.object->name != "AxesHelper") {
-                firstValidIntersect = &intersect;
-                break;
-            }
-        }
+        // The rest of your code remains the same as it correctly filters from the `intersects` vector.
+        const threepp::Intersection* firstValidIntersect = &intersects.front();
 
         // --- Only proceed if a valid intersection was found
         if(firstValidIntersect != nullptr)
