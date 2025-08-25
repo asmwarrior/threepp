@@ -694,17 +694,28 @@ auto axis = threepp::AxesHelper::create(5);
 
         std::vector<float> vertices =
         {
-            // Random-like values for a non-straight path
-            -2.0f, 1.5f, -3.0f,
-            -0.5f, 2.5f, 1.0f,
-            2.0f, -1.0f, 3.0f,
-            -1.0f, 0.5f, 4.0f,
-            3.0f, -2.5f, 5.0f
+            // NEW: A 3D spiral-like path with more points
+            -0.0f, 0.0f, 0.0f,
+            0.5f, 0.0f, 0.5f,
+            0.8f, 0.5f, 1.0f,
+            0.7f, 1.0f, 1.5f,
+            0.0f, 1.2f, 2.0f,
+            -0.7f, 1.0f, 2.5f,
+            -0.8f, 0.5f, 3.0f,
+            -0.5f, 0.0f, 3.5f,
+            -0.0f, -0.5f, 4.0f,
+            0.5f, -0.7f, 4.5f
         };
 
 
         std::vector<float> colors =
         {
+            // Matching the number of vertices
+            1, 0, 0, 1,
+            0, 1, 0, 1,
+            0, 0, 1, 1,
+            1, 1, 0, 1,
+            1, 0, 1, 1,
             1, 0, 0, 1,
             0, 1, 0, 1,
             0, 0, 1, 1,
