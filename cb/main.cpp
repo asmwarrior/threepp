@@ -759,6 +759,26 @@ auto axis = threepp::AxesHelper::create(5);
         m_points = CustomPoints::create(geometry, material);
 
         scene->add(m_points);
+
+        // --- NEW: Add lines to connect the points ---
+        // Create a new geometry for the lines. We can reuse the same vertices.
+        auto lineGeometry = BufferGeometry::create();
+        lineGeometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
+
+        // Create a basic material for the lines
+        auto lineMaterial = threepp::LineBasicMaterial::create();
+        lineMaterial->color = threepp::Color::red; // A clear color to stand out
+        lineMaterial->transparent = false;
+
+        // Create the line object from the geometry and material
+        // The Line class will draw a segment between each consecutive pair of vertices.
+        auto line = threepp::Line::create(lineGeometry, lineMaterial);
+
+        // Add the line to the scene
+        scene->add(line);
+
+
+
     }
 
 
