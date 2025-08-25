@@ -995,7 +995,6 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
         // The rest of your code remains the same as it correctly filters from the `intersects` vector.
         const threepp::Intersection* firstValidIntersect = &intersects.front();
 
-        // --- Only proceed if a valid intersection was found
         if(firstValidIntersect != nullptr)
         {
             const auto& intersect = *firstValidIntersect;
@@ -1005,18 +1004,41 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
             selectionMarker->visible = true;
 
 
-            // Get the coordinates of the selected point
+            // Get the coordinates of the selected point and add color
             std::stringstream ss;
             ss << "x:" << std::fixed << std::setprecision(2) << intersect.point.x;
             ss << "\ny:" << std::fixed << std::setprecision(2) << intersect.point.y;
             ss << "\nz:" << std::fixed << std::setprecision(2) << intersect.point.z;
+
+            // --- NEW: Retrieve and add the color of the selected point
+            if(auto points = dynamic_cast<threepp::Points*>(intersect.object))
+            {
+                if(intersect.index.has_value())
+                {
+                    int idx = intersect.index.value();
+                    if(auto* colAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("color")))
+                    {
+                        float r = colAttr->getX(idx);
+                        float g = colAttr->getY(idx);
+                        float b = colAttr->getZ(idx);
+                        float a = colAttr->getW(idx); // Your attribute has 4 components
+
+                        ss << "\nColor: (" << std::fixed << std::setprecision(2) << r << ", "
+                           << std::fixed << std::setprecision(2) << g << ", "
+                           << std::fixed << std::setprecision(2) << b << ", "
+                           << std::fixed << std::setprecision(2) << a << ")";
+                    }
+                }
+            }
+
+
             std::string text = ss.str();
 
             // --- Update the label's text
             textLabel->setText(text); // This is an assumed method. Check your threepp docs for Text2D
             textLabel->visible = true; // Make the label visible
 
-// --- NEW: Calculate the label's position with a fixed PIXEL offset ---
+            // --- NEW: Calculate the label's position with a fixed PIXEL offset ---
 
             // Get the dimensions of your canvas in pixels
             int w, h;
@@ -1066,9 +1088,9 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
 
 
             std::cout << "Clicked object: "
-                      << (selectedObject->name.empty() ? "<unnamed>" : selectedObject->name)
-                      << " (type: " << typeid(*selectedObject).name() << ")"
-                      << std::endl;
+                              << (selectedObject->name.empty() ? "<unnamed>" : selectedObject->name)
+                              << " (type: " << typeid(*selectedObject).name() << ")"
+                              << std::endl;
 
 
             if(auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject))
@@ -1105,7 +1127,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
                             float z = posAttr->getZ(idx);
 
                             std::cout << "Clicked point index: " << idx
-                                      << " -> position(" << x << ", " << y << ", " << z << ")";
+                                             << " -> position(" << x << ", " << y << ", " << z << ")";
                         }
 
                         // --- Get color attribute ---
@@ -1117,13 +1139,6 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
                             float a = colAttr->getW(idx); // Your attribute has 4 components
 
                             std::cout << "  color(" << r << ", " << g << ", " << b << ", " << a << ")" << std::endl;
-
-//                        // --- Change the point's color to yellow
-//                        threepp::Color newColor(1.0f, 1.0f, 0.0f); // Yellow
-//                        colAttr->setXYZ(idx, newColor.r, newColor.g, newColor.b);
-//
-//                        // IMPORTANT: Tell the attribute that its data has changed
-//                        colAttr->needsUpdate();
                         }
 
                         std::cout << std::endl;
@@ -1133,17 +1148,18 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
                 Refresh(true);
             }
         }
-        else
-        {
-                    // If no intersection was found, hide the marker and the label
-            selectionMarker->visible = false;
-            textLabel->visible = false;
-
-        }
-
-        event.Skip(); // allow other handlers to run
     }
+    else
+    {
+        // If no intersection was found, hide the marker and the label
+        selectionMarker->visible = false;
+        textLabel->visible = false;
+
+    }
+
+    event.Skip(); // allow other handlers to run
 }
+
 
 
 
