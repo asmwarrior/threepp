@@ -233,186 +233,16 @@ private:
 };
 
 
-#define TEST 0
-
-
-
-#if not TEST
-class SurfaceRenderer
-{
-public:
-
-    SurfaceRenderer()
-    {
-        m_Geometry = std::make_shared<threepp::BufferGeometry>();
-
-        m_Material = threepp::ShaderMaterial::create();
-        m_Material->vertexShader = m_VertexShader;
-        m_Material->fragmentShader = m_FragmentShader;
-
-        // Set uniforms explicitly
-        m_Material->uniforms =
-        {
-            {"ZL", threepp::Uniform(-1.0f)},
-            {"ZH", threepp::Uniform(1.0f)}
-        };
-
-        m_Mesh = std::make_shared<threepp::Mesh>(m_Geometry, m_Material);
-    }
-
-    void SetData(const std::vector<threepp::Vector3>& vertices,
-                 const std::vector<unsigned int>& indices)
-    {
-        // Convert vertices
-        std::vector<float> verticesData;
-        verticesData.reserve(vertices.size() * 3);
-        for (auto& v : vertices)
-        {
-            verticesData.push_back(v.x);
-            verticesData.push_back(v.y);
-            verticesData.push_back(v.z);
-        }
-
-        // --- positions
-        auto positionsUnique = threepp::TypedBufferAttribute<float>::create(verticesData, 3);
-        m_Geometry->setAttribute("position", std::move(positionsUnique));
-
-        // --- indices (Option 1: simple)
-        m_Geometry->setIndex(indices);
-
-        // --- compute normals
-        m_Geometry->computeVertexNormals();
-    }
-
-
-    void SetZRange(float zl, float zh)
-    {
-        m_Material->uniforms["ZL"] = threepp::Uniform(zl);
-        m_Material->uniforms["ZH"] = threepp::Uniform(zh);
-    }
-
-
-    std::shared_ptr<threepp::Mesh> GetMesh()
-    {
-        return m_Mesh;
-    }
-
-private:
-
-    std::shared_ptr<threepp::BufferGeometry> m_Geometry;
-    std::shared_ptr<threepp::ShaderMaterial> m_Material;
-    std::shared_ptr<threepp::Mesh> m_Mesh;
-
-    const std::string m_VertexShader = R"(#version 330 core
-layout(location = 0) in vec3 vertPos;
-uniform mat4 projectionMatrix;
-uniform mat4 modelViewMatrix;
-
-out vec3 pos;
-
-void main()
-{
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(vertPos, 1.0);
-    pos = vertPos;
-})";
-
-    const std::string m_FragmentShader = R"(#version 330 core
-uniform float ZL;
-uniform float ZH;
-
-in vec3 pos;
-out vec3 color;
-
-vec3 jet(float t)
-{
-    return clamp(vec3(1.5) - abs(4.0 * vec3(t) + vec3(-3, -2, -1)),
-                 vec3(0), vec3(1));
-}
-
-void main()
-{
-    float param = (pos.z - ZL) / (ZH - ZL);
-    color = jet(param);
-})";
-};
-
-#else
-
-class SurfaceRenderer
-{
-public:
-
-    SurfaceRenderer()
-    {
-        m_Geometry = std::make_shared<threepp::BufferGeometry>();
-
-        // --- For testing, use a simple MeshBasicMaterial instead of custom shaders
-        m_Material = threepp::MeshBasicMaterial::create();
-        m_Material->color = threepp::Color::red;
-
-        m_Mesh = std::make_shared<threepp::Mesh>(m_Geometry, m_Material);
-    }
-
-    void SetData(const std::vector<threepp::Vector3>& vertices,
-                 const std::vector<unsigned int>& indices)
-    {
-        // Convert vertices
-        std::vector<float> verticesData;
-        verticesData.reserve(vertices.size() * 3);
-        for (auto& v : vertices)
-        {
-            verticesData.push_back(v.x);
-            verticesData.push_back(v.y);
-            verticesData.push_back(v.z);
-        }
-
-        // --- positions
-        auto positionsUnique = threepp::TypedBufferAttribute<float>::create(verticesData, 3);
-        m_Geometry->setAttribute("position", std::move(positionsUnique));
-
-        // --- indices
-        m_Geometry->setIndex(indices);
-
-        // --- compute normals (optional for basic material)
-        m_Geometry->computeVertexNormals();
-    }
-
-    void SetZRange(float /*zl*/, float /*zh*/)
-    {
-        // ignored for testing
-    }
-
-    std::shared_ptr<threepp::Mesh> GetMesh()
-    {
-        return m_Mesh;
-    }
-
-private:
-
-    std::shared_ptr<threepp::BufferGeometry> m_Geometry;
-
-    // Changed to MeshBasicMaterial for testing
-    std::shared_ptr<threepp::MeshBasicMaterial> m_Material;
-
-    std::shared_ptr<threepp::Mesh> m_Mesh;
-
-    // Shader strings are no longer used in this testing version
-    const std::string m_VertexShader = "";
-    const std::string m_FragmentShader = "";
-};
-
-
-#endif
-
-
-
+// =============================================================
+// Helper Functions (outside the class)
+// =============================================================
 
 // Example height function
 float f(float x, float y, float tx = 0.0f)
 {
-    float dx = x-0.5f;
-    float dy = y-0.5f;
-    float r = std::sqrt(dx*dx + dy*dy);
+    float dx = x - 0.5f;
+    float dy = y - 0.5f;
+    float r = std::sqrt(dx * dx + dy * dy);
     return std::sin((r + tx) * 8.0f * 3.1415926f) * 0.5f;
 }
 
@@ -453,6 +283,228 @@ void generate_grid(int N, std::vector<threepp::Vector3>& vertices, std::vector<u
     }
 }
 
+
+// Set this to 0 to use the simplified ShaderMaterial
+#define TEST 0
+
+#if not TEST
+
+class SurfaceRenderer
+{
+public:
+    SurfaceRenderer()
+    {
+        m_Geometry = std::make_shared<threepp::BufferGeometry>();
+        m_Material = threepp::ShaderMaterial::create();
+
+        // Use the simplified shaders below
+        m_Material->vertexShader = m_VertexShader;
+        m_Material->fragmentShader = m_FragmentShader;
+
+        // Correctly initialize uniforms required by the shaders
+        m_Material->uniforms = {
+            {"ZL", threepp::Uniform(-1.0f)}, // Example default value
+            {"ZH", threepp::Uniform(1.0f)}  // Example default value
+        };
+
+        m_Mesh = std::make_shared<threepp::Mesh>(m_Geometry, m_Material);
+        m_Mesh->frustumCulled = false;
+    }
+
+    void SetData(const std::vector<threepp::Vector3>& vertices,
+                 const std::vector<unsigned int>& indices)
+    {
+        std::vector<float> verticesData;
+        verticesData.reserve(vertices.size() * 3);
+        for (const auto& v : vertices)
+        {
+            verticesData.push_back(v.x);
+            verticesData.push_back(v.y);
+            verticesData.push_back(v.z);
+        }
+
+        auto positionsUnique = threepp::TypedBufferAttribute<float>::create(verticesData, 3);
+        m_Geometry->setAttribute("position", std::move(positionsUnique));
+        m_Geometry->setIndex(indices);
+        m_Geometry->computeVertexNormals();
+        m_Geometry->computeBoundingSphere();
+        m_Geometry->computeBoundingBox();
+    }
+
+    void SetZRange(float /*zl*/, float /*zh*/) {}
+
+    std::shared_ptr<threepp::Mesh> GetMesh()
+    {
+        return m_Mesh;
+    }
+
+private:
+    std::shared_ptr<threepp::BufferGeometry> m_Geometry;
+    std::shared_ptr<threepp::ShaderMaterial> m_Material;
+    std::shared_ptr<threepp::Mesh> m_Mesh;
+
+//    // Simplified Vertex Shader
+//    const std::string m_VertexShader = R"(#version 330 core
+//        layout(location = 0) in vec3 position;
+//        uniform mat4 projectionMatrix;
+//        uniform mat4 modelViewMatrix;
+//
+//        void main() {
+//            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+//        }
+//    )";
+//
+//    // Simplified Fragment Shader that outputs a solid color
+//    const std::string m_FragmentShader = R"(#version 330 core
+//        out vec4 color;
+//
+//        void main() {
+//            color = vec4(1.0, 0.0, 0.0, 1.0); // Solid red color
+//        }
+//    )";
+
+
+
+//    const std::string m_VertexShader = R"(#version 330 core
+//layout(location = 0) in vec3 position;
+//uniform mat4 projectionMatrix;
+//uniform mat4 modelViewMatrix;
+//
+//out vec3 pos;
+//
+//void main()
+//{
+//    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+//    pos = position;
+//})";
+
+
+
+
+
+
+
+//    const std::string m_FragmentShader = R"(#version 330 core
+//uniform float ZL;
+//uniform float ZH;
+//
+//in vec3 pos;
+//out vec4 color;
+//
+//vec3 jet(float t)
+//{
+//    return clamp(vec3(1.5) - abs(4.0 * vec3(t) + vec3(-3, -2, -1)),
+//                 vec3(0), vec3(1));
+//}
+//
+//void main()
+//{
+//    float param = (pos.z - ZL) / (ZH - ZL);
+//    vec3 c = jet(param);
+//    color = vec4(c, 1.0);
+//
+//})";
+
+
+
+// Use a multi-line const char* for reliable compilation
+// Corrected Vertex Shader: No #version at the top
+const std::string m_VertexShader = R"(
+out vec3 pos;
+
+void main()
+{
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    pos = position;
+}
+)";
+
+const std::string m_FragmentShader = R"(
+uniform float ZL;
+uniform float ZH;
+
+in vec3 pos;
+out vec4 color;
+
+vec3 jet(float t)
+{
+    return clamp(vec3(1.5) - abs(4.0 * vec3(t) + vec3(-3, -2, -1)),
+                 vec3(0), vec3(1));
+}
+
+void main()
+{
+    float param = (pos.z - ZL) / (ZH - ZL);
+    vec3 c = jet(param);
+    color = vec4(c, 1.0);
+}
+)";
+
+
+
+
+};
+
+
+#else
+
+
+// =============================================================
+// TEST MODE: MeshBasicMaterial-based Renderer
+// =============================================================
+class SurfaceRenderer
+{
+public:
+
+    SurfaceRenderer()
+    {
+        m_Geometry = std::make_shared<threepp::BufferGeometry>();
+        m_Material = threepp::MeshBasicMaterial::create();
+        m_Material->color = threepp::Color::red;
+        m_Mesh = std::make_shared<threepp::Mesh>(m_Geometry, m_Material);
+    }
+
+    void SetData(const std::vector<threepp::Vector3>& vertices,
+                 const std::vector<unsigned int>& indices)
+    {
+        std::vector<float> verticesData;
+        verticesData.reserve(vertices.size() * 3);
+        for (auto& v : vertices)
+        {
+            verticesData.push_back(v.x);
+            verticesData.push_back(v.y);
+            verticesData.push_back(v.z);
+        }
+
+        auto positionsUnique = threepp::TypedBufferAttribute<float>::create(verticesData, 3);
+        m_Geometry->setAttribute("position", std::move(positionsUnique));
+        m_Geometry->setIndex(indices);
+        m_Geometry->computeVertexNormals();
+        m_Geometry->computeBoundingSphere();
+        m_Geometry->computeBoundingBox();
+    }
+
+    void SetZRange(float /*zl*/, float /*zh*/)
+    {
+        // ignored for testing
+    }
+
+    std::shared_ptr<threepp::Mesh> GetMesh()
+    {
+        return m_Mesh;
+    }
+
+private:
+
+    std::shared_ptr<threepp::BufferGeometry> m_Geometry;
+    std::shared_ptr<threepp::MeshBasicMaterial> m_Material;
+    std::shared_ptr<threepp::Mesh> m_Mesh;
+    const std::string m_VertexShader = "";
+    const std::string m_FragmentShader = "";
+};
+
+
+#endif
 
 
 
@@ -745,6 +797,8 @@ bool OpenGLCanvas::InitializeOpenGL()
     auto viewPortSize = GetSize() * GetContentScaleFactor();
     WindowSize size{viewPortSize.x, viewPortSize.y};
     renderer = std::make_shared<GLRenderer>(size);
+
+    renderer->checkShaderErrors = true;
     renderer->autoClear = false;
 
     scene = Scene::create();
@@ -1172,26 +1226,27 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
 
-    {
+
         // Create and keep the instance alive
         surface = std::make_shared<SurfaceRenderer>();
 
-        // Generate vertices and indices
-        std::vector<threepp::Vector3> vertices;
-        std::vector<unsigned int> indices;
-        generate_grid(50, vertices, indices);
+        std::vector<threepp::Vector3> vertices1;
+        std::vector<unsigned int> indices1;
+        generate_grid(50, vertices1, indices1);
 
-        // Set the surface data
-        surface->SetData(vertices, indices);
+        surface->SetData(vertices1, indices1);
 
-        // Optional: adjust Z range
-        surface->SetZRange(-0.5f, 0.5f);
+        float zl = +std::numeric_limits<float>::max();
+        float zh = -std::numeric_limits<float>::max();
+        for (auto &v: vertices1)
+        {
+            if(v.z < zl) zl = v.z;
+            if(v.z > zh) zh = v.z;
+        }
+        surface->SetZRange(zl, zh);
 
-        // Add mesh to scene
         scene->add(surface->GetMesh());
 
-//        surface->GetMesh()->material()->wireframe = true;
-    }
 
 
 
