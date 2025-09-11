@@ -295,8 +295,23 @@ public:
     SurfaceRenderer()
     {
         m_Geometry = std::make_shared<threepp::BufferGeometry>();
-        m_Material = threepp::ShaderMaterial::create();
+        m_Material = threepp::RawShaderMaterial::create();
         m_Material->side = threepp::Side::Double;
+
+        m_Material->lights = false;     // no lighting
+        m_Material->transparent = false;
+        m_Material->depthTest = true;
+        m_Material->depthWrite = true;
+
+
+
+//        m_Material->lights = false;       // don’t inject lighting uniforms/chunks
+//        m_Material->fog = false;          // don’t inject fog
+//        m_Material->toneMapped = false;   // disable tone mapping
+//        m_Material->depthTest = true;     // (optional, control manually)
+//        m_Material->depthWrite = true;    // (optional, control manually)
+//        m_Material->transparent = false;  // (avoid blending)
+
 
         // Use the simplified shaders below
         m_Material->vertexShader = m_VertexShader;
@@ -304,8 +319,8 @@ public:
 
         // Correctly initialize uniforms required by the shaders
         m_Material->uniforms = {
-            {"ZL", threepp::Uniform(-1.0f)}, // Example default value
-            {"ZH", threepp::Uniform(1.0f)}  // Example default value
+            {"ZL", threepp::Uniform(-0.5f)}, // Example default value
+            {"ZH", threepp::Uniform(0.5f)}  // Example default value
         };
 
         m_Mesh = std::make_shared<threepp::Mesh>(m_Geometry, m_Material);
@@ -418,6 +433,12 @@ private:
 // Use a multi-line const char* for reliable compilation
 // Corrected Vertex Shader: No #version at the top
 const std::string m_VertexShader = R"(
+#version 330 core
+layout(location = 0) in vec3 position;
+
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+
 out vec3 pos;
 
 void main()
@@ -428,6 +449,7 @@ void main()
 )";
 
 const std::string m_FragmentShader = R"(
+#version 330 core
 uniform float ZL;
 uniform float ZH;
 
@@ -808,6 +830,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     renderer->checkShaderErrors = true;
     renderer->autoClear = false;
+    renderer->outputEncoding = threepp::Encoding::Linear;
 
     scene = Scene::create();
     scene->background = Color::aliceblue;
