@@ -670,6 +670,42 @@ auto createPlane() {
     return plane;
 }
 
+/**
+ * @brief Creates and configures a shared_ptr to a Sprite object.
+ *
+ * This function loads a texture, creates a material, and then constructs a sprite.
+ * It includes fixes for the compile errors encountered.
+ *
+ * @return std::shared_ptr<Sprite> A shared pointer to the created sprite.
+ */
+std::shared_ptr<Sprite> createSprite() {
+
+// Load texture
+        TextureLoader loader;
+        auto texture = loader.load("bird.png");
+
+        texture->needsUpdate();  // Mark texture for update
+
+        // Create sprite material
+        auto material = SpriteMaterial::create();
+        material->map = texture;
+        material->transparent = true;
+        material->map->offset.set(0.5, 0.5);
+        material->blending = Blending::Normal;  // Use correct enum value
+
+        // Create sprite
+        auto sprite = Sprite::create(material);
+
+        // Set scale based on image aspect ratio (replace with actual ratio)
+        float aspect = 1.0f;  // width/height ratio of your image
+        sprite->scale.set(0.5f * aspect, 0.5f, 1.0f);
+
+        // Position the sprite
+        sprite->position.set(0, 0, 0);
+
+        return sprite;
+}
+
 wxIMPLEMENT_APP(MyApp);
 
 bool MyApp::OnInit()
@@ -881,6 +917,8 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
+
+    scene->add(createSprite());
 
 
     {
