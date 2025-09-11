@@ -332,7 +332,14 @@ public:
         m_Geometry->computeBoundingBox();
     }
 
-    void SetZRange(float /*zl*/, float /*zh*/) {}
+    void SetZRange(float zl, float zh)
+    {
+        if(m_Material)
+        {
+            m_Material->uniforms["ZL"] = threepp::Uniform(zl);
+            m_Material->uniforms["ZH"] = threepp::Uniform(zh);
+        }
+    }
 
     std::shared_ptr<threepp::Mesh> GetMesh()
     {
