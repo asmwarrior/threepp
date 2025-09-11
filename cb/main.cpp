@@ -296,6 +296,7 @@ public:
     {
         m_Geometry = std::make_shared<threepp::BufferGeometry>();
         m_Material = threepp::ShaderMaterial::create();
+        m_Material->side = threepp::Side::Double;
 
         // Use the simplified shaders below
         m_Material->vertexShader = m_VertexShader;
