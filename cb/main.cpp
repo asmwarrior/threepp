@@ -567,6 +567,8 @@ public:
     bool InitializeOpenGLFunctions();
     bool InitializeOpenGL();
 
+    std::shared_ptr<Sprite> CreateSprite();
+
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
 
@@ -623,6 +625,8 @@ private:
 
     std::shared_ptr<SurfaceRenderer> surface;  // <-- keep it alive
 
+    std::shared_ptr<Sprite> m_Sprite; // keep it alive
+
     //////////////////////////////////////////////////////////////////////////////
 
 };
@@ -678,7 +682,7 @@ auto createPlane() {
  *
  * @return std::shared_ptr<Sprite> A shared pointer to the created sprite.
  */
-std::shared_ptr<Sprite> createSprite() {
+std::shared_ptr<Sprite> OpenGLCanvas::CreateSprite() {
 
 // Load texture
         TextureLoader loader;
@@ -694,16 +698,17 @@ std::shared_ptr<Sprite> createSprite() {
         material->blending = Blending::Normal;  // Use correct enum value
 
         // Create sprite
-        auto sprite = Sprite::create(material);
+        m_Sprite = Sprite::create(material);
 
         // Set scale based on image aspect ratio (replace with actual ratio)
         float aspect = 1.0f;  // width/height ratio of your image
-        sprite->scale.set(0.5f * aspect, 0.5f, 1.0f);
+        float desiredSize = 0.01f;
+        m_Sprite->scale.set(0.5f * aspect * desiredSize, 0.5f * desiredSize, 1.0f);
 
         // Position the sprite
-        sprite->position.set(0, 0, 0);
+        m_Sprite->position.set(0, 0, 0);
 
-        return sprite;
+        return m_Sprite;
 }
 
 wxIMPLEMENT_APP(MyApp);
@@ -918,7 +923,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
 
-    scene->add(createSprite());
+    scene->add(CreateSprite());
 
 
     {
@@ -987,8 +992,6 @@ bool OpenGLCanvas::InitializeOpenGL()
     scene->add(line2);
 
 #endif // 0
-
-
 
 // --- NEW: Create a 3D coordinate system with ticks and labels for all axes ---
     {
@@ -1501,32 +1504,50 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
             int w, h;
             GetSize(&w, &h);
 
-            // 1. Create a Vector3 from the intersection point
-            threepp::Vector3 projectedPoint = intersect.point;
+                // 1. Create a Vector3 from the intersection point
+                threepp::Vector3 projectedPoint = intersects.front().point;
 
-            // 2. Project the 3D point to Normalized Device Coordinates (NDC)
-            projectedPoint.project(*camera);
+                // 2. Project the 3D point to Normalized Device Coordinates (NDC)
+                projectedPoint.project(*camera);
 
-            // 3. Convert NDC to pixel coordinates and add the desired pixel offset
-            // NOTE: positive X is right, negative Y is down
-            float pixelOffsetX = 20.0f; // Adjust these pixel values as needed
-            float pixelOffsetY = -20.0f;
+                // 3. Convert NDC to pixel coordinates and add the desired pixel offset
+                // NOTE: positive X is right, negative Y is down
+                float labelPixelOffsetX = 20.0f; // Adjust these pixel values as needed
+                float labelPixelOffsetY = -20.0f;
 
-            float pixelX = ((projectedPoint.x + 1.0f) * 0.5f) * static_cast<float>(w) + pixelOffsetX;
-            float pixelY = ((projectedPoint.y + 1.0f) * 0.5f) * static_cast<float>(h) + pixelOffsetY;
+                float labelPixelX = ((projectedPoint.x + 1.0f) * 0.5f) * static_cast<float>(w) + labelPixelOffsetX;
+                float labelPixelY = ((projectedPoint.y + 1.0f) * 0.5f) * static_cast<float>(h) + labelPixelOffsetY;
 
-            // 4. Convert back to NDC coordinates
-            threepp::Vector3 unprojectedPoint;
-            unprojectedPoint.x = (pixelX / static_cast<float>(w)) * 2.0f - 1.0f;
-            unprojectedPoint.y = (pixelY / static_cast<float>(h)) * 2.0f - 1.0f;
-            unprojectedPoint.z = projectedPoint.z; // Keep the same depth
+                // 4. Convert back to NDC coordinates for the text label
+                threepp::Vector3 unprojectedLabelPoint;
+                unprojectedLabelPoint.x = (labelPixelX / static_cast<float>(w)) * 2.0f - 1.0f;
+                unprojectedLabelPoint.y = (labelPixelY / static_cast<float>(h)) * 2.0f - 1.0f;
+                unprojectedLabelPoint.z = -0.9f; // Keep a constant z to maintain a fixed size and visibility
 
+                // 5. Unproject the new NDC vector to get its 3D world position
+                unprojectedLabelPoint.unproject(*camera);
 
-            // 5. Unproject the new NDC vector to get its 3D world position
-            unprojectedPoint.unproject(*camera);
+                // 6. Set the label's position to the newly calculated position
+                textLabel->position.copy(unprojectedLabelPoint);
 
-            // 6. Set the label's position to the newly calculated position
-            textLabel->position.copy(unprojectedPoint);
+                // Now, calculate the position for the sprite using a different pixel offset
+                float spritePixelOffsetX = 20.0f;
+                float spritePixelOffsetY = 20.0f; // A larger negative value moves the sprite higher.
+
+                float spritePixelX = ((projectedPoint.x + 1.0f) * 0.5f) * static_cast<float>(w) + spritePixelOffsetX;
+                float spritePixelY = ((projectedPoint.y + 1.0f) * 0.5f) * static_cast<float>(h) + spritePixelOffsetY;
+
+                // Convert back to NDC coordinates for the sprite
+                threepp::Vector3 unprojectedSpritePoint;
+                unprojectedSpritePoint.x = (spritePixelX / static_cast<float>(w)) * 2.0f - 1.0f;
+                unprojectedSpritePoint.y = (spritePixelY / static_cast<float>(h)) * 2.0f - 1.0f;
+                unprojectedSpritePoint.z = -0.9f; // Keep a constant z to maintain a fixed size and visibility
+
+                // Unproject the new NDC vector to get its 3D world position
+                unprojectedSpritePoint.unproject(*camera);
+
+                // Set the sprite's position to the newly calculated position
+                m_Sprite->position.copy(unprojectedSpritePoint);
 
 
             std::cout << "Hit object: " << intersect.object->name;
