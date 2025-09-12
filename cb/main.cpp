@@ -567,7 +567,7 @@ public:
     bool InitializeOpenGLFunctions();
     bool InitializeOpenGL();
 
-    std::shared_ptr<Sprite> CreateSprite();
+    std::shared_ptr<Sprite> CreateAnimalSprite(const std::string& texturePath);
 
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
@@ -625,7 +625,7 @@ private:
 
     std::shared_ptr<SurfaceRenderer> surface;  // <-- keep it alive
 
-    std::shared_ptr<Sprite> m_Sprite; // keep it alive
+    std::shared_ptr<Sprite> m_Sprite[4]; // keep it alive
 
     //////////////////////////////////////////////////////////////////////////////
 
@@ -682,11 +682,11 @@ auto createPlane() {
  *
  * @return std::shared_ptr<Sprite> A shared pointer to the created sprite.
  */
-std::shared_ptr<Sprite> OpenGLCanvas::CreateSprite() {
+std::shared_ptr<Sprite> OpenGLCanvas::CreateAnimalSprite(const std::string& texturePath) {
 
-// Load texture
+        // Load texture
         TextureLoader loader;
-        auto texture = loader.load("bird.png");
+        auto texture = loader.load(texturePath);
 
         texture->needsUpdate();  // Mark texture for update
 
@@ -698,17 +698,17 @@ std::shared_ptr<Sprite> OpenGLCanvas::CreateSprite() {
         material->blending = Blending::Normal;  // Use correct enum value
 
         // Create sprite
-        m_Sprite = Sprite::create(material);
+        auto sprite = Sprite::create(material);
 
         // Set scale based on image aspect ratio (replace with actual ratio)
         float aspect = 1.0f;  // width/height ratio of your image
         float desiredSize = 0.01f;
-        m_Sprite->scale.set(0.5f * aspect * desiredSize, 0.5f * desiredSize, 1.0f);
+        sprite->scale.set(0.5f * aspect * desiredSize, 0.5f * desiredSize, 1.0f);
 
         // Position the sprite
-        m_Sprite->position.set(0, 0, 0);
+        sprite->position.set(0, 0, 0);
 
-        return m_Sprite;
+        return sprite;
 }
 
 wxIMPLEMENT_APP(MyApp);
@@ -923,7 +923,10 @@ bool OpenGLCanvas::InitializeOpenGL()
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
 
-    scene->add(CreateSprite());
+    m_Sprite[0] = CreateAnimalSprite("bird.png");
+    m_Sprite[1] = CreateAnimalSprite("dog.png");
+    scene->add(m_Sprite[0]);
+    scene->add(m_Sprite[1]);
 
 
     {
@@ -1470,12 +1473,15 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
             ss << "\ny:" << std::fixed << std::setprecision(2) << intersect.point.y;
             ss << "\nz:" << std::fixed << std::setprecision(2) << intersect.point.z;
 
+            int pointIndex = 0;
+
             // --- NEW: Retrieve and add the color of the selected point
             if(auto points = dynamic_cast<threepp::Points*>(intersect.object))
             {
                 if(intersect.index.has_value())
                 {
                     int idx = intersect.index.value();
+                    pointIndex = idx;
                     if(auto* colAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("color")))
                     {
                         float r = colAttr->getX(idx);
@@ -1547,7 +1553,20 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
                 unprojectedSpritePoint.unproject(*camera);
 
                 // Set the sprite's position to the newly calculated position
-                m_Sprite->position.copy(unprojectedSpritePoint);
+                m_Sprite[0]->position.copy(unprojectedSpritePoint);
+                m_Sprite[1]->position.copy(unprojectedSpritePoint);
+
+                if (pointIndex % 2 == 0)
+                {
+                    m_Sprite[0]->visible = true;
+                    m_Sprite[1]->visible = false;
+                }
+                else
+                {
+                    m_Sprite[0]->visible = false;
+                    m_Sprite[1]->visible = true;
+                }
+
 
 
             std::cout << "Hit object: " << intersect.object->name;
