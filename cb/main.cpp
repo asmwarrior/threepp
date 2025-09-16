@@ -617,7 +617,7 @@ private:
     // For object picking
     Raycaster raycaster;
     Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
-    std::shared_ptr<Points> selectionMarker; // e.g. a small sphere to show hit point
+    std::shared_ptr<Points> m_SelectionMarkerPointCircle; // e.g. a small sphere to show hit point
 
     std::shared_ptr<threepp::Text2D> textLabel;
 
@@ -1270,9 +1270,9 @@ bool OpenGLCanvas::InitializeOpenGL()
     markerMaterial->uniforms["ringThickness"] = threepp::Uniform(0.2f); // Adjust the thickness (0.0 to 1.0)
 
     // --- Create the marker as a Points object ---
-    selectionMarker = threepp::Points::create(markerGeometry, markerMaterial);
-    selectionMarker->visible = false;
-    scene->add(selectionMarker);
+    m_SelectionMarkerPointCircle = threepp::Points::create(markerGeometry, markerMaterial);
+    m_SelectionMarkerPointCircle->visible = false;
+    scene->add(m_SelectionMarkerPointCircle);
 
 
     // --- NEW: Create the dynamic text label
@@ -1444,7 +1444,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     // Setup raycaster from camera
     raycaster.setFromCamera(ndcMouse, *camera);
 
-    selectionMarker->visible = false;
+    m_SelectionMarkerPointCircle->visible = false;
 
     // --- OPTIMIZATION: Raycast only against the custom points object
     // Create a vector of RAW pointers to pass to the raycaster
@@ -1463,8 +1463,8 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
             const auto& intersect = *firstValidIntersect;
 
             // Move selection marker
-            selectionMarker->position.copy(intersect.point);
-            selectionMarker->visible = true;
+            m_SelectionMarkerPointCircle->position.copy(intersect.point);
+            m_SelectionMarkerPointCircle->visible = true;
 
 
             // Get the coordinates of the selected point and add color
@@ -1649,7 +1649,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     else
     {
         // If no intersection was found, hide the marker and the label
-        selectionMarker->visible = false;
+        m_SelectionMarkerPointCircle->visible = false;
         textLabel->visible = false;
 
     }
