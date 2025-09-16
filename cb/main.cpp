@@ -621,7 +621,7 @@ private:
 
     std::shared_ptr<threepp::Text2D> m_SelectionMarkerTextLabel;
 
-    std::shared_ptr<CustomPoints> m_points; // Your custom object
+    std::shared_ptr<CustomPoints> m_TrackPoints; // Your custom object
 
     std::shared_ptr<SurfaceRenderer> surface;  // <-- keep it alive
 
@@ -1181,9 +1181,9 @@ bool OpenGLCanvas::InitializeOpenGL()
         //auto points = Points::create(geometry, material);
 
         // --- create our CustomPoints object ---
-        m_points = CustomPoints::create(geometry, material);
+        m_TrackPoints = CustomPoints::create(geometry, material);
 
-        scene->add(m_points);
+        scene->add(m_TrackPoints);
 
         // --- NEW: Add lines to connect the points ---
         // Create a new geometry for the lines. We can reuse the same vertices.
@@ -1437,7 +1437,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
 
     // --- NEW: Feed the custom points object the mouse position
     // This is the one line that enables your custom raycasting logic to work
-    if (auto customPoints = std::dynamic_pointer_cast<CustomPoints>(m_points)) {
+    if (auto customPoints = std::dynamic_pointer_cast<CustomPoints>(m_TrackPoints)) {
         customPoints->setMousePosition(ndcMouse.x, ndcMouse.y);
     }
 
@@ -1448,7 +1448,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
 
     // --- OPTIMIZATION: Raycast only against the custom points object
     // Create a vector of RAW pointers to pass to the raycaster
-    std::vector<threepp::Object3D*> objectsToRaycast = { m_points.get() };
+    std::vector<threepp::Object3D*> objectsToRaycast = { m_TrackPoints.get() };
 
     // Pass the vector of raw pointers to intersectObjects
     auto intersects = raycaster.intersectObjects(objectsToRaycast, true);
