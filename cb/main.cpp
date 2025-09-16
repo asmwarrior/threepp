@@ -615,15 +615,17 @@ private:
 
     private:
     // For object picking
-    Raycaster raycaster;
+    Raycaster m_RayCaster;
+
     Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
+
     std::shared_ptr<Points> m_SelectionMarkerPointCircle; // e.g. a small sphere to show hit point
 
     std::shared_ptr<threepp::Text2D> m_SelectionMarkerTextLabel;
 
     std::shared_ptr<CustomPoints> m_TrackPoints; // Your custom object
 
-    std::shared_ptr<SurfaceRenderer> surface;  // <-- keep it alive
+    std::shared_ptr<SurfaceRenderer> m_Surface;  // <-- keep it alive
 
     std::shared_ptr<Sprite> m_Sprite[4]; // keep it alive
 
@@ -1303,13 +1305,13 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
         // Create and keep the instance alive
-        surface = std::make_shared<SurfaceRenderer>();
+        m_Surface = std::make_shared<SurfaceRenderer>();
 
         std::vector<threepp::Vector3> vertices1;
         std::vector<unsigned int> indices1;
         generate_grid(50, vertices1, indices1);
 
-        surface->SetData(vertices1, indices1);
+        m_Surface->SetData(vertices1, indices1);
 
         float zl = +std::numeric_limits<float>::max();
         float zh = -std::numeric_limits<float>::max();
@@ -1318,9 +1320,9 @@ bool OpenGLCanvas::InitializeOpenGL()
             if(v.z < zl) zl = v.z;
             if(v.z > zh) zh = v.z;
         }
-        surface->SetZRange(zl, zh);
+        m_Surface->SetZRange(zl, zh);
 
-        scene->add(surface->GetMesh());
+        scene->add(m_Surface->GetMesh());
 
 
 
@@ -1442,7 +1444,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     }
 
     // Setup raycaster from camera
-    raycaster.setFromCamera(ndcMouse, *camera);
+    m_RayCaster.setFromCamera(ndcMouse, *camera);
 
     m_SelectionMarkerPointCircle->visible = false;
 
@@ -1451,7 +1453,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     std::vector<threepp::Object3D*> objectsToRaycast = { m_TrackPoints.get() };
 
     // Pass the vector of raw pointers to intersectObjects
-    auto intersects = raycaster.intersectObjects(objectsToRaycast, true);
+    auto intersects = m_RayCaster.intersectObjects(objectsToRaycast, true);
 
     if(!intersects.empty())
     {
