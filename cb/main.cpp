@@ -619,7 +619,7 @@ private:
     Vector2 mouse{-Infinity<float>, -Infinity<float>}; // Normalized device coords
     std::shared_ptr<Points> m_SelectionMarkerPointCircle; // e.g. a small sphere to show hit point
 
-    std::shared_ptr<threepp::Text2D> textLabel;
+    std::shared_ptr<threepp::Text2D> m_SelectionMarkerTextLabel;
 
     std::shared_ptr<CustomPoints> m_points; // Your custom object
 
@@ -1287,16 +1287,16 @@ bool OpenGLCanvas::InitializeOpenGL()
     textLabelMaterial->depthWrite = false;
 
 
-    textLabel = Text2D::create(TextGeometry::Options(font2, 0.02f), "Ready", textLabelMaterial);
-    textLabel->position.set(0, 0.2f, 0);
-    textLabel->visible = false;
+    m_SelectionMarkerTextLabel = Text2D::create(TextGeometry::Options(font2, 0.02f), "Ready", textLabelMaterial);
+    m_SelectionMarkerTextLabel->position.set(0, 0.2f, 0);
+    m_SelectionMarkerTextLabel->visible = false;
 
     // --- CORRECT: Set renderOrder on the object itself, not the material
-    textLabel->renderOrder = 999;
+    m_SelectionMarkerTextLabel->renderOrder = 999;
 
     // Make the label a child of the marker so it moves with it
     // selectionMarker->add(*textLabel);
-    scene->add(*textLabel); // Add the label to the scene as a separate object
+    scene->add(*m_SelectionMarkerTextLabel); // Add the label to the scene as a separate object
 
 
 
@@ -1501,8 +1501,8 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
             std::string text = ss.str();
 
             // --- Update the label's text
-            textLabel->setText(text); // This is an assumed method. Check your threepp docs for Text2D
-            textLabel->visible = true; // Make the label visible
+            m_SelectionMarkerTextLabel->setText(text); // This is an assumed method. Check your threepp docs for Text2D
+            m_SelectionMarkerTextLabel->visible = true; // Make the label visible
 
             // --- NEW: Calculate the label's position with a fixed PIXEL offset ---
 
@@ -1534,7 +1534,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
                 unprojectedLabelPoint.unproject(*camera);
 
                 // 6. Set the label's position to the newly calculated position
-                textLabel->position.copy(unprojectedLabelPoint);
+                m_SelectionMarkerTextLabel->position.copy(unprojectedLabelPoint);
 
                 // Now, calculate the position for the sprite using a different pixel offset
                 float spritePixelOffsetX = 20.0f;
@@ -1650,7 +1650,7 @@ void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
     {
         // If no intersection was found, hide the marker and the label
         m_SelectionMarkerPointCircle->visible = false;
-        textLabel->visible = false;
+        m_SelectionMarkerTextLabel->visible = false;
 
     }
 
