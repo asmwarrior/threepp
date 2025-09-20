@@ -572,6 +572,7 @@ public:
     void CreateMarkerLabel();
     void CreateCustomPointLine();
     void CreateMesh();
+    void CreateBillboardText();
 
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
@@ -935,35 +936,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     scene->add(m_Sprite[1]);
 
 
-    {
-#if 1
-
-    // billboard text labels
-    float textSize = 0.02;
-    std::string displayText = "threepp!";
-
-    const auto textLabelMaterial = SpriteMaterial::create();
-    textLabelMaterial->side = Side::Double;
-    textLabelMaterial->color = Color::green;
-    textLabelMaterial->sizeAttenuation = false;
-
-    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, textLabelMaterial));
-    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, textLabelMaterial));
-
-    textMesh2dArray[0]->position.z = 5;
-    textMesh2dArray[1]->position.z = -5;
-
-    textMesh2dArray[0]->geometry()->center();
-    textMesh2dArray[1]->geometry()->center();
-
-    textMesh2dArray[0]->name = "textLabelFront";
-    textMesh2dArray[1]->name = "textLabelBack";
-
-    scene->add(*(textMesh2dArray[0]));
-    scene->add(*(textMesh2dArray[1]));
-
-#endif // 1
-    }
+    CreateBillboardText();
 
 
 #if 0
@@ -1797,4 +1770,34 @@ void OpenGLCanvas::CreateMesh()
     m_Surface->SetZRange(zl, zh);
 
     scene->add(m_Surface->GetMesh());
+}
+
+void OpenGLCanvas::CreateBillboardText()
+{
+#if 1
+    // billboard text labels
+    float textSize = 0.02;
+    std::string displayText = "threepp!";
+
+    const auto textLabelMaterial = SpriteMaterial::create();
+    textLabelMaterial->side = Side::Double;
+    textLabelMaterial->color = Color::green;
+    textLabelMaterial->sizeAttenuation = false;
+
+    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, textLabelMaterial));
+    textMesh2dArray.push_back(Text2D::create(TextGeometry::Options(font2, textSize), displayText, textLabelMaterial));
+
+    textMesh2dArray[0]->position.z = 5;
+    textMesh2dArray[1]->position.z = -5;
+
+    textMesh2dArray[0]->geometry()->center();
+    textMesh2dArray[1]->geometry()->center();
+
+    textMesh2dArray[0]->name = "textLabelFront";
+    textMesh2dArray[1]->name = "textLabelBack";
+
+    scene->add(*(textMesh2dArray[0]));
+    scene->add(*(textMesh2dArray[1]));
+
+#endif // 1
 }
