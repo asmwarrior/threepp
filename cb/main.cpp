@@ -573,6 +573,7 @@ public:
     void CreateCustomPointLine();
     void CreateMesh();
     void CreateBillboardText();
+    void CreateHUDText();
 
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
@@ -905,30 +906,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     scene->add(plane);
 #endif // 0
 
-    WindowSize s = this->size();
-
-    hud = std::make_shared<HUD>(s);
-
-    font1 = fontLoader.defaultFont();
-    font2 = *fontLoader.load("data/fonts/helvetiker_regular.typeface.json");
-
-    opts1 = std::make_shared<TextGeometry::Options>(font1, 40);
-    hudText1 = std::make_shared<Text2D>(*opts1, "Hello World!");
-    hudText1->setColor(Color::black);
-    hudText1->name = "hudText1";
-    hud->add(*hudText1, HUD::Options());
-
-    opts2 = std::make_shared<TextGeometry::Options>(font2, 10, 1);
-    hudText2 = std::make_shared<Text2D>(*opts1, "");
-    hudText2->setColor(Color::red);
-    hudText2->name = "hudText2";
-    hud->add(*hudText2, HUD::Options()
-             .setNormalizedPosition({1, 1})
-             .setHorizontalAlignment(threepp::HUD::HorizontalAlignment::RIGHT)
-             .setVerticalAlignment(threepp::HUD::VerticalAlignment::TOP));
-
-    hudText2->setText("Delta=1.23456789", *opts2);
-    hud->needsUpdate(*hudText2);
+    CreateHUDText();
 
     m_Sprite[0] = CreateAnimalSprite("bird.png");
     m_Sprite[1] = CreateAnimalSprite("dog.png");
@@ -1800,4 +1778,33 @@ void OpenGLCanvas::CreateBillboardText()
     scene->add(*(textMesh2dArray[1]));
 
 #endif // 1
+}
+
+void OpenGLCanvas::CreateHUDText()
+{
+
+    WindowSize s = this->size();
+
+    hud = std::make_shared<HUD>(s);
+
+    font1 = fontLoader.defaultFont();
+    font2 = *fontLoader.load("data/fonts/helvetiker_regular.typeface.json");
+
+    opts1 = std::make_shared<TextGeometry::Options>(font1, 40);
+    hudText1 = std::make_shared<Text2D>(*opts1, "Hello World!");
+    hudText1->setColor(Color::black);
+    hudText1->name = "hudText1";
+    hud->add(*hudText1, HUD::Options());
+
+    opts2 = std::make_shared<TextGeometry::Options>(font2, 10, 1);
+    hudText2 = std::make_shared<Text2D>(*opts1, "");
+    hudText2->setColor(Color::red);
+    hudText2->name = "hudText2";
+    hud->add(*hudText2, HUD::Options()
+             .setNormalizedPosition({1, 1})
+             .setHorizontalAlignment(threepp::HUD::HorizontalAlignment::RIGHT)
+             .setVerticalAlignment(threepp::HUD::VerticalAlignment::TOP));
+
+    hudText2->setText("Delta=1.23456789", *opts2);
+    hud->needsUpdate(*hudText2);
 }
