@@ -570,6 +570,7 @@ public:
     std::shared_ptr<Sprite> CreateAnimalSprite(const std::string& texturePath);
     void CreateMarkerPoint();
     void CreateMarkerLabel();
+    void CreateCustomPointLine();
 
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
@@ -1099,116 +1100,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
 
-// ---- sample data: 5 points with RawShaderMaterial ----
-    {
-//    std::vector<float> vertices = {
-//        0.0f, 0.0f, 0.0f,
-//        1.0f, 0.0f, 0.0f,
-//        0.0f, 1.0f, 0.0f,
-//        0.0f, 0.0f, 1.0f,
-//       -1.0f,-1.0f, 0.0f
-//    };
-
-
-        std::vector<float> vertices =
-        {
-            // NEW: A 3D spiral-like path with more points
-            -0.0f, 0.0f, 0.0f,
-            0.5f, 0.0f, 0.5f,
-            0.8f, 0.5f, 1.0f,
-            0.7f, 1.0f, 1.5f,
-            0.0f, 1.2f, 2.0f,
-            -0.7f, 1.0f, 2.5f,
-            -0.8f, 0.5f, 3.0f,
-            -0.5f, 0.0f, 3.5f,
-            -0.0f, -0.5f, 4.0f,
-            0.5f, -0.7f, 4.5f
-        };
-
-
-        std::vector<float> colors =
-        {
-            // Matching the number of vertices
-            1, 0, 0, 1,
-            0, 1, 0, 1,
-            0, 0, 1, 1,
-            1, 1, 0, 1,
-            1, 0, 1, 1,
-            1, 0, 0, 1,
-            0, 1, 0, 1,
-            0, 0, 1, 1,
-            1, 1, 0, 1,
-            1, 0, 1, 1
-        };
-
-        auto geometry = BufferGeometry::create();
-        geometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
-        geometry->setAttribute("color", FloatBufferAttribute::create(colors, 4));
-
-        auto material = RawShaderMaterial::create();
-        material->vertexShader = R"(
-        #version 330 core
-        #define attribute in
-        #define varying out
-        uniform mat4 modelViewMatrix;
-        uniform mat4 projectionMatrix;
-        uniform float pointSize;  // uniform to control circle radius
-        attribute vec3 position;
-        attribute vec4 color;
-        varying vec4 vColor;
-        void main() {
-            vColor = color;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = pointSize;   // use uniform instead of fixed value
-        }
-    )";
-
-        material->fragmentShader = R"(
-        #version 330 core
-        #define varying in
-        out vec4 pc_fragColor;
-        #define gl_FragColor pc_fragColor
-        varying vec4 vColor;
-        void main() {
-            vec2 coord = 2.0 * gl_PointCoord - 1.0;
-            if(dot(coord, coord) > 1.0) discard;
-            gl_FragColor = vColor;
-        }
-    )";
-
-        material->side = Side::Double;
-        material->transparent = false;
-
-        // set initial point size
-        material->uniforms["pointSize"] = threepp::Uniform(10.0f);  // programmer can modify this
-
-        //auto points = Points::create(geometry, material);
-
-        // --- create our CustomPoints object ---
-        m_TrackPoints = CustomPoints::create(geometry, material);
-
-        scene->add(m_TrackPoints);
-
-        // --- NEW: Add lines to connect the points ---
-        // Create a new geometry for the lines. We can reuse the same vertices.
-        auto lineGeometry = BufferGeometry::create();
-        lineGeometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
-
-        // Create a basic material for the lines
-        auto lineMaterial = threepp::LineBasicMaterial::create();
-        lineMaterial->color = threepp::Color::red; // A clear color to stand out
-        lineMaterial->transparent = false;
-
-        // Create the line object from the geometry and material
-        // The Line class will draw a segment between each consecutive pair of vertices.
-        auto line = threepp::Line::create(lineGeometry, lineMaterial);
-
-        // Add the line to the scene
-        scene->add(line);
-
-
-
-    }
+    CreateCustomPointLine();
 
 
 //    float sphereRadius = 0.1f;
@@ -1802,5 +1694,117 @@ void OpenGLCanvas::CreateMarkerLabel()
     // Make the label a child of the marker so it moves with it
     // selectionMarker->add(*textLabel);
     scene->add(*m_SelectionMarkerTextLabel); // Add the label to the scene as a separate object
+
+}
+
+
+
+void OpenGLCanvas::CreateCustomPointLine()
+// ---- sample data: 5 points with RawShaderMaterial ----
+{
+//    std::vector<float> vertices = {
+//        0.0f, 0.0f, 0.0f,
+//        1.0f, 0.0f, 0.0f,
+//        0.0f, 1.0f, 0.0f,
+//        0.0f, 0.0f, 1.0f,
+//       -1.0f,-1.0f, 0.0f
+//    };
+
+
+    std::vector<float> vertices =
+    {
+        // NEW: A 3D spiral-like path with more points
+        -0.0f, 0.0f, 0.0f,
+        0.5f, 0.0f, 0.5f,
+        0.8f, 0.5f, 1.0f,
+        0.7f, 1.0f, 1.5f,
+        0.0f, 1.2f, 2.0f,
+        -0.7f, 1.0f, 2.5f,
+        -0.8f, 0.5f, 3.0f,
+        -0.5f, 0.0f, 3.5f,
+        -0.0f, -0.5f, 4.0f,
+        0.5f, -0.7f, 4.5f
+    };
+
+
+    std::vector<float> colors =
+    {
+        // Matching the number of vertices
+        1, 0, 0, 1,
+        0, 1, 0, 1,
+        0, 0, 1, 1,
+        1, 1, 0, 1,
+        1, 0, 1, 1,
+        1, 0, 0, 1,
+        0, 1, 0, 1,
+        0, 0, 1, 1,
+        1, 1, 0, 1,
+        1, 0, 1, 1
+    };
+
+    auto geometry = BufferGeometry::create();
+    geometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
+    geometry->setAttribute("color", FloatBufferAttribute::create(colors, 4));
+
+    auto material = RawShaderMaterial::create();
+    material->vertexShader = R"(
+    #version 330 core
+    #define attribute in
+    #define varying out
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+    uniform float pointSize;  // uniform to control circle radius
+    attribute vec3 position;
+    attribute vec4 color;
+    varying vec4 vColor;
+    void main() {
+        vColor = color;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = pointSize;   // use uniform instead of fixed value
+    }
+)";
+
+    material->fragmentShader = R"(
+    #version 330 core
+    #define varying in
+    out vec4 pc_fragColor;
+    #define gl_FragColor pc_fragColor
+    varying vec4 vColor;
+    void main() {
+        vec2 coord = 2.0 * gl_PointCoord - 1.0;
+        if(dot(coord, coord) > 1.0) discard;
+        gl_FragColor = vColor;
+    }
+)";
+
+    material->side = Side::Double;
+    material->transparent = false;
+
+    // set initial point size
+    material->uniforms["pointSize"] = threepp::Uniform(10.0f);  // programmer can modify this
+
+    //auto points = Points::create(geometry, material);
+
+    // --- create our CustomPoints object ---
+    m_TrackPoints = CustomPoints::create(geometry, material);
+
+    scene->add(m_TrackPoints);
+
+    // --- NEW: Add lines to connect the points ---
+    // Create a new geometry for the lines. We can reuse the same vertices.
+    auto lineGeometry = BufferGeometry::create();
+    lineGeometry->setAttribute("position", FloatBufferAttribute::create(vertices, 3));
+
+    // Create a basic material for the lines
+    auto lineMaterial = threepp::LineBasicMaterial::create();
+    lineMaterial->color = threepp::Color::red; // A clear color to stand out
+    lineMaterial->transparent = false;
+
+    // Create the line object from the geometry and material
+    // The Line class will draw a segment between each consecutive pair of vertices.
+    auto line = threepp::Line::create(lineGeometry, lineMaterial);
+
+    // Add the line to the scene
+    scene->add(line);
 
 }
