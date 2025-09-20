@@ -575,6 +575,8 @@ public:
     void CreateBillboardText();
     void CreateHUDText();
     void CreateCordinateSystem();
+    void Create3DLine();
+    void CreateOthers();
 
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
@@ -892,20 +894,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     controls = std::make_shared<OrbitControls>(*camera, *this);
 
-#if 0
-    auto box = createBox();
-    box->name = "box";
-    scene->add(box);
-
-    auto sphere = createSphere();
-    sphere->name = "sphereInsideBox";
-    box->add(sphere);
-
-    auto plane = createPlane();
-    plane->name = "plane";
-    auto planeMaterial = plane->material()->as<MeshBasicMaterial>();
-    scene->add(plane);
-#endif // 0
+    CreateOthers();
 
     CreateHUDText();
 
@@ -918,41 +907,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     CreateBillboardText();
 
 
-#if 0
-    // add 3D lines
-    auto lineMaterial = threepp::LineBasicMaterial::create();
-    lineMaterial->color.setRGB(1, 0, 0);
-
-    auto lineGeometry = threepp::BufferGeometry::create();
-    std::vector<float> lineVertices =
-    {
-        -1, 0, 0,
-            1, 0, 0,
-            0, -1, 0,
-            0, 1, 0
-        };
-    lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(lineVertices, 3));
-
-    auto line = threepp::LineSegments::create(lineGeometry, lineMaterial);
-    line->name = "crossLines";
-    scene->add(line);
-
-
-    auto longLineGeometry = threepp::BufferGeometry::create();
-    std::vector<float> longLineVertices =
-    {
-        0, 0, 0,
-        1, 1, 2,
-        2, 3, 4,
-        6, 8, 9
-    };
-    longLineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(longLineVertices, 3));
-
-    auto line2 = threepp::Line::create(longLineGeometry, lineMaterial);
-    line2->name = "longLine";
-    scene->add(line2);
-
-#endif // 0
+    Create3DLine();
 
     CreateCordinateSystem();
 
@@ -962,18 +917,7 @@ bool OpenGLCanvas::InitializeOpenGL()
     CreateCustomPointLine();
 
 
-//    float sphereRadius = 0.1f;
-//    // auto sphereGeometry = SphereGeometry::create(sphereRadius);
-//    auto sphereGeometry = threepp::BoxGeometry::create(1.0f, 1.0f, 1.0f);
-//    auto sphereMaterial = MeshBasicMaterial::create();
-//    sphereMaterial->wireframe = true;
-//    sphereMaterial->color = Color::red;
-//
-//
-//    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
-//    selectionMarker->name = "selectionMarker";
-//    selectionMarker->visible = false;
-//    scene->add(selectionMarker);
+
 
 
 
@@ -1813,3 +1757,77 @@ void OpenGLCanvas::CreateCordinateSystem()
         scene->add(zLabel);
     }
 }
+
+void OpenGLCanvas::Create3DLine()
+{
+    #if 0
+    // add 3D lines
+    auto lineMaterial = threepp::LineBasicMaterial::create();
+    lineMaterial->color.setRGB(1, 0, 0);
+
+    auto lineGeometry = threepp::BufferGeometry::create();
+    std::vector<float> lineVertices =
+    {
+        -1, 0, 0,
+            1, 0, 0,
+            0, -1, 0,
+            0, 1, 0
+        };
+    lineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(lineVertices, 3));
+
+    auto line = threepp::LineSegments::create(lineGeometry, lineMaterial);
+    line->name = "crossLines";
+    scene->add(line);
+
+
+    auto longLineGeometry = threepp::BufferGeometry::create();
+    std::vector<float> longLineVertices =
+    {
+        0, 0, 0,
+        1, 1, 2,
+        2, 3, 4,
+        6, 8, 9
+    };
+    longLineGeometry->setAttribute("position", threepp::FloatBufferAttribute::create(longLineVertices, 3));
+
+    auto line2 = threepp::Line::create(longLineGeometry, lineMaterial);
+    line2->name = "longLine";
+    scene->add(line2);
+
+#endif // 0
+}
+
+
+void OpenGLCanvas::CreateOthers()
+{
+#if 0
+    auto box = createBox();
+    box->name = "box";
+    scene->add(box);
+
+    auto sphere = createSphere();
+    sphere->name = "sphereInsideBox";
+    box->add(sphere);
+
+    auto plane = createPlane();
+    plane->name = "plane";
+    auto planeMaterial = plane->material()->as<MeshBasicMaterial>();
+    scene->add(plane);
+#endif // 0
+
+
+//    float sphereRadius = 0.1f;
+//    // auto sphereGeometry = SphereGeometry::create(sphereRadius);
+//    auto sphereGeometry = threepp::BoxGeometry::create(1.0f, 1.0f, 1.0f);
+//    auto sphereMaterial = MeshBasicMaterial::create();
+//    sphereMaterial->wireframe = true;
+//    sphereMaterial->color = Color::red;
+//
+//
+//    selectionMarker = Mesh::create(sphereGeometry, sphereMaterial);
+//    selectionMarker->name = "selectionMarker";
+//    selectionMarker->visible = false;
+//    scene->add(selectionMarker);
+}
+
+
