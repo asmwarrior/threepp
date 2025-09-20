@@ -569,6 +569,7 @@ public:
 
     std::shared_ptr<Sprite> CreateAnimalSprite(const std::string& texturePath);
     void CreateMarkerPoint();
+    void CreateMarkerLabel();
 
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
@@ -1229,28 +1230,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
     CreateMarkerPoint();
 
-    // --- NEW: Create the dynamic text label
-    // Create the dynamic text label
-    const auto textLabelMaterial = SpriteMaterial::create();
-    textLabelMaterial->side = Side::Double;
-    textLabelMaterial->color = Color::black; // Match the marker color
-    textLabelMaterial->sizeAttenuation = false;
-
-    // Disable depth testing and writing for the material (this is correct)
-    textLabelMaterial->depthTest = false;
-    textLabelMaterial->depthWrite = false;
-
-
-    m_SelectionMarkerTextLabel = Text2D::create(TextGeometry::Options(font2, 0.02f), "Ready", textLabelMaterial);
-    m_SelectionMarkerTextLabel->position.set(0, 0.2f, 0);
-    m_SelectionMarkerTextLabel->visible = false;
-
-    // --- CORRECT: Set renderOrder on the object itself, not the material
-    m_SelectionMarkerTextLabel->renderOrder = 999;
-
-    // Make the label a child of the marker so it moves with it
-    // selectionMarker->add(*textLabel);
-    scene->add(*m_SelectionMarkerTextLabel); // Add the label to the scene as a separate object
+    CreateMarkerLabel();
 
 
 
@@ -1796,4 +1776,31 @@ void OpenGLCanvas::CreateMarkerPoint()
     m_SelectionMarkerPointCircle = threepp::Points::create(markerGeometry, markerMaterial);
     m_SelectionMarkerPointCircle->visible = false;
     scene->add(m_SelectionMarkerPointCircle);
+}
+
+void OpenGLCanvas::CreateMarkerLabel()
+{
+    // --- NEW: Create the dynamic text label
+    // Create the dynamic text label
+    const auto textLabelMaterial = SpriteMaterial::create();
+    textLabelMaterial->side = Side::Double;
+    textLabelMaterial->color = Color::black; // Match the marker color
+    textLabelMaterial->sizeAttenuation = false;
+
+    // Disable depth testing and writing for the material (this is correct)
+    textLabelMaterial->depthTest = false;
+    textLabelMaterial->depthWrite = false;
+
+
+    m_SelectionMarkerTextLabel = Text2D::create(TextGeometry::Options(font2, 0.02f), "Ready", textLabelMaterial);
+    m_SelectionMarkerTextLabel->position.set(0, 0.2f, 0);
+    m_SelectionMarkerTextLabel->visible = false;
+
+    // --- CORRECT: Set renderOrder on the object itself, not the material
+    m_SelectionMarkerTextLabel->renderOrder = 999;
+
+    // Make the label a child of the marker so it moves with it
+    // selectionMarker->add(*textLabel);
+    scene->add(*m_SelectionMarkerTextLabel); // Add the label to the scene as a separate object
+
 }
