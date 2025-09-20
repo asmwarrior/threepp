@@ -574,6 +574,7 @@ public:
     void CreateMesh();
     void CreateBillboardText();
     void CreateHUDText();
+    void CreateCordinateSystem();
 
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
@@ -953,101 +954,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 #endif // 0
 
-// --- NEW: Create a 3D coordinate system with ticks and labels for all axes ---
-    {
-        // Line material for the main axes
-        auto xAxisMaterial = threepp::LineBasicMaterial::create();
-        xAxisMaterial->color = threepp::Color::red; // Make the x-axis red
-        xAxisMaterial->linewidth = 2;
-
-        auto yAxisMaterial = threepp::LineBasicMaterial::create();
-        yAxisMaterial->color = threepp::Color::green; // Make the y-axis green
-        yAxisMaterial->linewidth = 2;
-
-        auto zAxisMaterial = threepp::LineBasicMaterial::create();
-        zAxisMaterial->color = threepp::Color::blue; // Make the z-axis blue
-        zAxisMaterial->linewidth = 2;
-
-        // Axis lines from -5 to 5
-        auto xAxisGeometry = threepp::BufferGeometry::create();
-        xAxisGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({-5, 0, 0, 5, 0, 0}, 3));
-        auto xAxis = threepp::LineSegments::create(xAxisGeometry, xAxisMaterial);
-        xAxis->name = "xAxis";
-        scene->add(xAxis);
-
-        auto yAxisGeometry = threepp::BufferGeometry::create();
-        yAxisGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({0, -5, 0, 0, 5, 0}, 3));
-        auto yAxis = threepp::LineSegments::create(yAxisGeometry, yAxisMaterial);
-        yAxis->name = "yAxis";
-        scene->add(yAxis);
-
-        auto zAxisGeometry = threepp::BufferGeometry::create();
-        zAxisGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({0, 0, -5, 0, 0, 5}, 3));
-        auto zAxis = threepp::LineSegments::create(zAxisGeometry, zAxisMaterial);
-        zAxis->name = "zAxis";
-        scene->add(zAxis);
-
-        // Ticks and labels
-        auto tickMaterial = threepp::LineBasicMaterial::create();
-        tickMaterial->color = threepp::Color::gray;
-
-        float tickLength = 0.2f;
-        float labelOffset = 0.3f;
-        float textSize = 0.02;
-
-        const auto textLabelMaterial = SpriteMaterial::create();
-        textLabelMaterial->side = Side::Double;
-        textLabelMaterial->color = Color::green;
-        textLabelMaterial->sizeAttenuation = false;
-
-        // X-axis ticks and labels
-        for(float i = -5; i <= 5; i += 1.0f)
-        {
-            auto xTickGeometry = threepp::BufferGeometry::create();
-            xTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({i, -tickLength, 0, i, tickLength, 0}, 3));
-            auto xTick = threepp::LineSegments::create(xTickGeometry, tickMaterial);
-            xTick->name = "xTick_" + std::to_string(static_cast<int>(i));
-            scene->add(xTick);
-
-            auto xLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize),
-                                                     std::to_string(static_cast<int>(i)), textLabelMaterial);
-            xLabel->position = {i, -labelOffset, 0};
-            xLabel->name = "xLabel_" + std::to_string(static_cast<int>(i));
-            scene->add(xLabel);
-        }
-
-        // Y-axis ticks and labels
-        for(float i = -5; i <= 5; i += 1.0f)
-        {
-            auto yTickGeometry = threepp::BufferGeometry::create();
-            yTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({-tickLength, i, 0, tickLength, i, 0}, 3));
-            auto yTick = threepp::LineSegments::create(yTickGeometry, tickMaterial);
-            yTick->name = "yTick_" + std::to_string(static_cast<int>(i));
-            scene->add(yTick);
-
-            auto yLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize),
-                                                     std::to_string(static_cast<int>(i)), textLabelMaterial);
-            yLabel->position = {-labelOffset, i, 0};
-            yLabel->name = "yLabel_" + std::to_string(static_cast<int>(i));
-            scene->add(yLabel);
-        }
-
-        // Z-axis ticks and labels
-        for(float i = -5; i <= 5; i += 1.0f)
-        {
-            auto zTickGeometry = threepp::BufferGeometry::create();
-            zTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({0, -tickLength, i, 0, tickLength, i}, 3));
-            auto zTick = threepp::LineSegments::create(zTickGeometry, tickMaterial);
-            zTick->name = "zTick_" + std::to_string(static_cast<int>(i));
-            scene->add(zTick);
-
-            auto zLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize),
-                                                     std::to_string(static_cast<int>(i)), textLabelMaterial);
-            zLabel->position = {0, -labelOffset, i};
-            zLabel->name = "zLabel_" + std::to_string(static_cast<int>(i));
-            scene->add(zLabel);
-        }
-    }
+    CreateCordinateSystem();
 
 
 
@@ -1807,4 +1714,102 @@ void OpenGLCanvas::CreateHUDText()
 
     hudText2->setText("Delta=1.23456789", *opts2);
     hud->needsUpdate(*hudText2);
+}
+
+
+void OpenGLCanvas::CreateCordinateSystem()
+// --- NEW: Create a 3D coordinate system with ticks and labels for all axes ---
+{
+    // Line material for the main axes
+    auto xAxisMaterial = threepp::LineBasicMaterial::create();
+    xAxisMaterial->color = threepp::Color::red; // Make the x-axis red
+    xAxisMaterial->linewidth = 2;
+
+    auto yAxisMaterial = threepp::LineBasicMaterial::create();
+    yAxisMaterial->color = threepp::Color::green; // Make the y-axis green
+    yAxisMaterial->linewidth = 2;
+
+    auto zAxisMaterial = threepp::LineBasicMaterial::create();
+    zAxisMaterial->color = threepp::Color::blue; // Make the z-axis blue
+    zAxisMaterial->linewidth = 2;
+
+    // Axis lines from -5 to 5
+    auto xAxisGeometry = threepp::BufferGeometry::create();
+    xAxisGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({-5, 0, 0, 5, 0, 0}, 3));
+    auto xAxis = threepp::LineSegments::create(xAxisGeometry, xAxisMaterial);
+    xAxis->name = "xAxis";
+    scene->add(xAxis);
+
+    auto yAxisGeometry = threepp::BufferGeometry::create();
+    yAxisGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({0, -5, 0, 0, 5, 0}, 3));
+    auto yAxis = threepp::LineSegments::create(yAxisGeometry, yAxisMaterial);
+    yAxis->name = "yAxis";
+    scene->add(yAxis);
+
+    auto zAxisGeometry = threepp::BufferGeometry::create();
+    zAxisGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({0, 0, -5, 0, 0, 5}, 3));
+    auto zAxis = threepp::LineSegments::create(zAxisGeometry, zAxisMaterial);
+    zAxis->name = "zAxis";
+    scene->add(zAxis);
+
+    // Ticks and labels
+    auto tickMaterial = threepp::LineBasicMaterial::create();
+    tickMaterial->color = threepp::Color::gray;
+
+    float tickLength = 0.2f;
+    float labelOffset = 0.3f;
+    float textSize = 0.02;
+
+    const auto textLabelMaterial = SpriteMaterial::create();
+    textLabelMaterial->side = Side::Double;
+    textLabelMaterial->color = Color::green;
+    textLabelMaterial->sizeAttenuation = false;
+
+    // X-axis ticks and labels
+    for(float i = -5; i <= 5; i += 1.0f)
+    {
+        auto xTickGeometry = threepp::BufferGeometry::create();
+        xTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({i, -tickLength, 0, i, tickLength, 0}, 3));
+        auto xTick = threepp::LineSegments::create(xTickGeometry, tickMaterial);
+        xTick->name = "xTick_" + std::to_string(static_cast<int>(i));
+        scene->add(xTick);
+
+        auto xLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize),
+                                                 std::to_string(static_cast<int>(i)), textLabelMaterial);
+        xLabel->position = {i, -labelOffset, 0};
+        xLabel->name = "xLabel_" + std::to_string(static_cast<int>(i));
+        scene->add(xLabel);
+    }
+
+    // Y-axis ticks and labels
+    for(float i = -5; i <= 5; i += 1.0f)
+    {
+        auto yTickGeometry = threepp::BufferGeometry::create();
+        yTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({-tickLength, i, 0, tickLength, i, 0}, 3));
+        auto yTick = threepp::LineSegments::create(yTickGeometry, tickMaterial);
+        yTick->name = "yTick_" + std::to_string(static_cast<int>(i));
+        scene->add(yTick);
+
+        auto yLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize),
+                                                 std::to_string(static_cast<int>(i)), textLabelMaterial);
+        yLabel->position = {-labelOffset, i, 0};
+        yLabel->name = "yLabel_" + std::to_string(static_cast<int>(i));
+        scene->add(yLabel);
+    }
+
+    // Z-axis ticks and labels
+    for(float i = -5; i <= 5; i += 1.0f)
+    {
+        auto zTickGeometry = threepp::BufferGeometry::create();
+        zTickGeometry->setAttribute("position", threepp::FloatBufferAttribute::create({0, -tickLength, i, 0, tickLength, i}, 3));
+        auto zTick = threepp::LineSegments::create(zTickGeometry, tickMaterial);
+        zTick->name = "zTick_" + std::to_string(static_cast<int>(i));
+        scene->add(zTick);
+
+        auto zLabel = threepp::Text2D::create(TextGeometry::Options(font2, textSize),
+                                                 std::to_string(static_cast<int>(i)), textLabelMaterial);
+        zLabel->position = {0, -labelOffset, i};
+        zLabel->name = "zLabel_" + std::to_string(static_cast<int>(i));
+        scene->add(zLabel);
+    }
 }
