@@ -571,6 +571,7 @@ public:
     void CreateMarkerPoint();
     void CreateMarkerLabel();
     void CreateCustomPointLine();
+    void CreateMesh();
 
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
@@ -1118,48 +1119,11 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 
 
-
-
     CreateMarkerPoint();
 
     CreateMarkerLabel();
 
-
-
-
-
-        // Create and keep the instance alive
-        m_Surface = std::make_shared<SurfaceRenderer>();
-
-        std::vector<threepp::Vector3> vertices1;
-        std::vector<unsigned int> indices1;
-        generate_grid(50, vertices1, indices1);
-
-        m_Surface->SetData(vertices1, indices1);
-
-        float zl = +std::numeric_limits<float>::max();
-        float zh = -std::numeric_limits<float>::max();
-        for (auto &v: vertices1)
-        {
-            if(v.z < zl) zl = v.z;
-            if(v.z > zh) zh = v.z;
-        }
-        m_Surface->SetZRange(zl, zh);
-
-        scene->add(m_Surface->GetMesh());
-
-
-
-
-
-
-
-
-
-
-
-
-
+    CreateMesh();
 
 
     isOpenGLInitialized = true;
@@ -1807,4 +1771,30 @@ void OpenGLCanvas::CreateCustomPointLine()
     // Add the line to the scene
     scene->add(line);
 
+}
+
+
+
+
+void OpenGLCanvas::CreateMesh()
+{
+    // Create and keep the instance alive
+    m_Surface = std::make_shared<SurfaceRenderer>();
+
+    std::vector<threepp::Vector3> vertices1;
+    std::vector<unsigned int> indices1;
+    generate_grid(50, vertices1, indices1);
+
+    m_Surface->SetData(vertices1, indices1);
+
+    float zl = +std::numeric_limits<float>::max();
+    float zh = -std::numeric_limits<float>::max();
+    for (auto &v: vertices1)
+    {
+        if(v.z < zl) zl = v.z;
+        if(v.z > zh) zh = v.z;
+    }
+    m_Surface->SetZRange(zl, zh);
+
+    scene->add(m_Surface->GetMesh());
 }
