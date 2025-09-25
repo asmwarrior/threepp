@@ -477,6 +477,14 @@ public:
     void Create3DLine();
     void CreateOthers();
 
+
+    void LogSelectionDebug(const threepp::Intersection &);
+    void HighlightSelectedObject(const threepp::Intersection &);
+    void UpdateLabelAndSpritePositions(const threepp::Intersection &, int);
+    void UpdateSelectionUI(const threepp::Intersection &);
+    std::optional<threepp::Intersection> PerformRaycast(const wxMouseEvent &);
+    void HandleMouseRightClick(const wxMouseEvent &);
+
     void OnPaint(wxPaintEvent &event);
     void OnSize(wxSizeEvent &event);
 
@@ -536,6 +544,11 @@ private:
     std::shared_ptr<SurfaceRenderer> m_Surface;  // <-- keep it alive
 
     std::shared_ptr<Sprite> m_Sprite[4]; // keep it alive
+
+
+    bool m_IsPointSelected = false;
+    threepp::Vector3 m_SelectedPointWorldPos;
+    int m_SelectedPointIndex = -1;
 
     //////////////////////////////////////////////////////////////////////////////
 
@@ -833,6 +846,7 @@ bool OpenGLCanvas::InitializeOpenGL()
 
 void OpenGLCanvas::OnPaint(wxPaintEvent &WXUNUSED(event))
 {
+    std::cout << "OnPaint()" << std::endl;
     wxPaintDC dc(this);
 
     if (!isOpenGLInitialized)
@@ -842,12 +856,70 @@ void OpenGLCanvas::OnPaint(wxPaintEvent &WXUNUSED(event))
 
     SetCurrent(*openGLContext);
 
+    // --- NEW: Update camera controls before rendering ---
+    controls->update(); // This applies the changes from mouse events
+
+        // --- NEW: Persistent UI update and rendering ---
+    if (m_IsPointSelected) {
+        // Get canvas size
+        int w, h;
+        GetSize(&w, &h);
+
+        // Project the stored 3D world point to screen space
+        threepp::Vector3 projectedPoint = m_SelectedPointWorldPos;
+        projectedPoint.project(*camera);
+
+        // Calculate and unproject the label position
+        float labelPixelX = ((projectedPoint.x + 1.0f) * 0.5f) * w + 20.0f;
+        float labelPixelY = ((projectedPoint.y + 1.0f) * 0.5f) * h - 20.0f;
+        threepp::Vector3 labelPos(
+            (labelPixelX / w) * 2.0f - 1.0f,
+            (labelPixelY / h) * 2.0f - 1.0f,
+            -0.9f
+        );
+        labelPos.unproject(*camera);
+
+        // Calculate and unproject the sprite position
+        float spritePixelX = ((projectedPoint.x + 1.0f) * 0.5f) * w + 20.0f;
+        float spritePixelY = ((projectedPoint.y + 1.0f) * 0.5f) * h + 20.0f;
+        threepp::Vector3 spritePos(
+            (spritePixelX / w) * 2.0f - 1.0f,
+            (spritePixelY / h) * 2.0f - 1.0f,
+            -0.9f
+        );
+        spritePos.unproject(*camera);
+
+        // Update the marker, label, and sprite positions
+        m_SelectionMarkerPointCircle->position.copy(m_SelectedPointWorldPos);
+        m_SelectionMarkerPointCircle->visible = true;
+
+        m_SelectionMarkerTextLabel->position.copy(labelPos);
+        m_SelectionMarkerTextLabel->visible = true;
+
+        m_Sprite[0]->position.copy(spritePos);
+        m_Sprite[1]->position.copy(spritePos);
+        m_Sprite[0]->visible = (m_SelectedPointIndex % 2 == 0);
+        m_Sprite[1]->visible = !m_Sprite[0]->visible;
+
+    } else {
+        // If no point is selected, make sure all UI elements are hidden
+        m_SelectionMarkerPointCircle->visible = false;
+        m_SelectionMarkerTextLabel->visible = false;
+        m_Sprite[0]->visible = false;
+        m_Sprite[1]->visible = false;
+    }
+
+
+    // Render the main scene first
     renderer->clear();
     renderer->render(*scene, *camera);
-    hud->apply(*renderer);
 
+
+    // Always apply the HUD after the main scene
+    hud->apply(*renderer);
     SwapBuffers();
 }
+
 
 void OpenGLCanvas::OnSize(wxSizeEvent &event)
 {
@@ -884,6 +956,7 @@ WindowSize OpenGLCanvas::size() const
 
 void OpenGLCanvas::OnMouseMove(wxMouseEvent& event)
 {
+    std::cout << "OnMouseMove()" << std::endl;
     wxPoint pos = event.GetPosition();
     Vector2 mousePos(static_cast<float>(pos.x), static_cast<float>(pos.y));
     onMouseMoveEvent(mousePos);
@@ -902,257 +975,42 @@ void OpenGLCanvas::OnMouseMove(wxMouseEvent& event)
 
 void OpenGLCanvas::OnMousePress(wxMouseEvent& event)
 {
-
+    std::cout << "OnMousePress()" << std::endl;
     int buttonFlag = event.GetButton();
     wxPoint pos = event.GetPosition();
     int button = 0;
-    if(wxMOUSE_BTN_LEFT == buttonFlag)
+    if(wxMOUSE_BTN_LEFT == buttonFlag) {
         button = 0;
-    else if(wxMOUSE_BTN_RIGHT == buttonFlag)
+    } else if(wxMOUSE_BTN_RIGHT == buttonFlag) {
         button = 1;
+    }
 
     Vector2 p{static_cast<float>(pos.x), static_cast<float>(pos.y)};
     onMousePressedEvent(button, p, PeripheralsEventSource::MouseAction::PRESS);
     Refresh(false);
 
-     // Convert mouse coordinates to normalized device coordinates (-1..1)
-    int mouseX = event.GetX();
-    int mouseY = event.GetY();
-    int w, h;
-    GetSize(&w, &h);
-
-    threepp::Vector2 ndcMouse(
-        (2.0f * mouseX) / static_cast<float>(w) - 1.0f,
-        -((2.0f * mouseY) / static_cast<float>(h) - 1.0f)
-    );
-
-    // --- NEW: Feed the custom points object the mouse position
-    // This is the one line that enables your custom raycasting logic to work
-    if (auto customPoints = std::dynamic_pointer_cast<CustomPoints>(m_TrackPoints)) {
-        customPoints->setMousePosition(ndcMouse.x, ndcMouse.y);
-    }
-
-    // Setup raycaster from camera
-    m_RayCaster.setFromCamera(ndcMouse, *camera);
-
-    m_SelectionMarkerPointCircle->visible = false;
-
-    // --- OPTIMIZATION: Raycast only against the custom points object
-    // Create a vector of RAW pointers to pass to the raycaster
-    std::vector<threepp::Object3D*> objectsToRaycast = { m_TrackPoints.get() };
-
-    // Pass the vector of raw pointers to intersectObjects
-    auto intersects = m_RayCaster.intersectObjects(objectsToRaycast, true);
-
-    if(!intersects.empty())
+    // This is the new if-block that checks for the right mouse button.
+    // The selection and highlighting logic is now inside here.
+    if(wxMOUSE_BTN_RIGHT == buttonFlag)
     {
-        // The rest of your code remains the same as it correctly filters from the `intersects` vector.
-        const threepp::Intersection* firstValidIntersect = &intersects.front();
+        HandleMouseRightClick(event);
 
-        if(firstValidIntersect != nullptr)
-        {
-            const auto& intersect = *firstValidIntersect;
-
-            // Move selection marker
-            m_SelectionMarkerPointCircle->position.copy(intersect.point);
-            m_SelectionMarkerPointCircle->visible = true;
-
-
-            // Get the coordinates of the selected point and add color
-            std::stringstream ss;
-            ss << "x:" << std::fixed << std::setprecision(2) << intersect.point.x;
-            ss << "\ny:" << std::fixed << std::setprecision(2) << intersect.point.y;
-            ss << "\nz:" << std::fixed << std::setprecision(2) << intersect.point.z;
-
-            int pointIndex = 0;
-
-            // --- NEW: Retrieve and add the color of the selected point
-            if(auto points = dynamic_cast<threepp::Points*>(intersect.object))
-            {
-                if(intersect.index.has_value())
-                {
-                    int idx = intersect.index.value();
-                    pointIndex = idx;
-                    if(auto* colAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("color")))
-                    {
-                        float r = colAttr->getX(idx);
-                        float g = colAttr->getY(idx);
-                        float b = colAttr->getZ(idx);
-                        float a = colAttr->getW(idx); // Your attribute has 4 components
-
-                        ss << "\nColor: (" << std::fixed << std::setprecision(2) << r << ", "
-                           << std::fixed << std::setprecision(2) << g << ", "
-                           << std::fixed << std::setprecision(2) << b << ", "
-                           << std::fixed << std::setprecision(2) << a << ")";
-                    }
-                }
-            }
-
-
-            std::string text = ss.str();
-
-            // --- Update the label's text
-            m_SelectionMarkerTextLabel->setText(text); // This is an assumed method. Check your threepp docs for Text2D
-            m_SelectionMarkerTextLabel->visible = true; // Make the label visible
-
-            // --- NEW: Calculate the label's position with a fixed PIXEL offset ---
-
-            // Get the dimensions of your canvas in pixels
-            int w, h;
-            GetSize(&w, &h);
-
-                // 1. Create a Vector3 from the intersection point
-                threepp::Vector3 projectedPoint = intersects.front().point;
-
-                // 2. Project the 3D point to Normalized Device Coordinates (NDC)
-                projectedPoint.project(*camera);
-
-                // 3. Convert NDC to pixel coordinates and add the desired pixel offset
-                // NOTE: positive X is right, negative Y is down
-                float labelPixelOffsetX = 20.0f; // Adjust these pixel values as needed
-                float labelPixelOffsetY = -20.0f;
-
-                float labelPixelX = ((projectedPoint.x + 1.0f) * 0.5f) * static_cast<float>(w) + labelPixelOffsetX;
-                float labelPixelY = ((projectedPoint.y + 1.0f) * 0.5f) * static_cast<float>(h) + labelPixelOffsetY;
-
-                // 4. Convert back to NDC coordinates for the text label
-                threepp::Vector3 unprojectedLabelPoint;
-                unprojectedLabelPoint.x = (labelPixelX / static_cast<float>(w)) * 2.0f - 1.0f;
-                unprojectedLabelPoint.y = (labelPixelY / static_cast<float>(h)) * 2.0f - 1.0f;
-                unprojectedLabelPoint.z = -0.9f; // Keep a constant z to maintain a fixed size and visibility
-
-                // 5. Unproject the new NDC vector to get its 3D world position
-                unprojectedLabelPoint.unproject(*camera);
-
-                // 6. Set the label's position to the newly calculated position
-                m_SelectionMarkerTextLabel->position.copy(unprojectedLabelPoint);
-
-                // Now, calculate the position for the sprite using a different pixel offset
-                float spritePixelOffsetX = 20.0f;
-                float spritePixelOffsetY = 20.0f; // A larger negative value moves the sprite higher.
-
-                float spritePixelX = ((projectedPoint.x + 1.0f) * 0.5f) * static_cast<float>(w) + spritePixelOffsetX;
-                float spritePixelY = ((projectedPoint.y + 1.0f) * 0.5f) * static_cast<float>(h) + spritePixelOffsetY;
-
-                // Convert back to NDC coordinates for the sprite
-                threepp::Vector3 unprojectedSpritePoint;
-                unprojectedSpritePoint.x = (spritePixelX / static_cast<float>(w)) * 2.0f - 1.0f;
-                unprojectedSpritePoint.y = (spritePixelY / static_cast<float>(h)) * 2.0f - 1.0f;
-                unprojectedSpritePoint.z = -0.9f; // Keep a constant z to maintain a fixed size and visibility
-
-                // Unproject the new NDC vector to get its 3D world position
-                unprojectedSpritePoint.unproject(*camera);
-
-                // Set the sprite's position to the newly calculated position
-                m_Sprite[0]->position.copy(unprojectedSpritePoint);
-                m_Sprite[1]->position.copy(unprojectedSpritePoint);
-
-                if (pointIndex % 2 == 0)
-                {
-                    m_Sprite[0]->visible = true;
-                    m_Sprite[1]->visible = false;
-                }
-                else
-                {
-                    m_Sprite[0]->visible = false;
-                    m_Sprite[1]->visible = true;
-                }
-
-
-
-            std::cout << "Hit object: " << intersect.object->name;
-
-
-            if(intersect.index.has_value())
-            {
-                std::cout << " index: " << intersect.index.value();
-            }
-
-            std::cout << " point: " << intersect.point;
-
-
-            // --- Highlight the clicked object ---
-            threepp::Object3D* selectedObject = intersect.object;
-
-
-            std::cout << "Clicked object: "
-                              << (selectedObject->name.empty() ? "<unnamed>" : selectedObject->name)
-                              << " (type: " << typeid(*selectedObject).name() << ")"
-                              << std::endl;
-
-
-            if(auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject))
-            {
-                // Cast to MeshBasicMaterial safely
-                if(auto mat = std::dynamic_pointer_cast<threepp::MeshBasicMaterial>(mesh->material()))
-                {
-                    std::cout << "Mesh clicked. Color: "
-                              << mat->color.r << ", "
-                              << mat->color.g << ", "
-                              << mat->color.b << std::endl;
-
-                    mat->color = threepp::Color::yellow; // highlight on click
-                }
-            }
-            else if(auto points = dynamic_cast<threepp::Points*>(selectedObject))
-            {
-                // --- FIX: Cast to RawShaderMaterial, not PointsMaterial ---
-                if(auto mat = std::dynamic_pointer_cast<threepp::RawShaderMaterial>(points->material()))
-                {
-                    // The pointSize is a uniform, not a direct material property
-                    float size = mat->uniforms.at("pointSize").value<float>();
-                    std::cout << "Points clicked. Size: " << size << std::endl;
-
-                    if(intersect.index.has_value())
-                    {
-                        int idx = intersect.index.value();
-
-                        // --- Get position attribute ---
-                        if(auto* posAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("position")))
-                        {
-                            float x = posAttr->getX(idx);
-                            float y = posAttr->getY(idx);
-                            float z = posAttr->getZ(idx);
-
-                            std::cout << "Clicked point index: " << idx
-                                             << " -> position(" << x << ", " << y << ", " << z << ")";
-                        }
-
-                        // --- Get color attribute ---
-                        if(auto* colAttr = dynamic_cast<threepp::FloatBufferAttribute*>(points->geometry()->getAttribute("color")))
-                        {
-                            float r = colAttr->getX(idx);
-                            float g = colAttr->getY(idx);
-                            float b = colAttr->getZ(idx);
-                            float a = colAttr->getW(idx); // Your attribute has 4 components
-
-                            std::cout << "  color(" << r << ", " << g << ", " << b << ", " << a << ")" << std::endl;
-                        }
-
-                        std::cout << std::endl;
-                    }
-                }
-
-                Refresh(true);
-            }
-        }
     }
-    else
+    else // Handle non-right-click behavior
     {
-        // If no intersection was found, hide the marker and the label
-        m_SelectionMarkerPointCircle->visible = false;
-        m_SelectionMarkerTextLabel->visible = false;
-
+        // If the left button or another button is pressed, hide the selection marker and label
+        //m_SelectionMarkerPointCircle->visible = false;
+        //m_SelectionMarkerTextLabel->visible = false;
     }
 
+    Refresh(true);
     event.Skip(); // allow other handlers to run
 }
 
 
-
-
 void OpenGLCanvas::OnMouseRelease(wxMouseEvent& event)
 {
+    std::cout << "OnMouseRelease()" << std::endl;
     int buttonFlag = event.GetButton();
     wxPoint pos = event.GetPosition();
     int button = 0;
@@ -1729,4 +1587,149 @@ void OpenGLCanvas::CreateOthers()
 //    scene->add(selectionMarker);
 }
 
+void OpenGLCanvas::HandleMouseRightClick(const wxMouseEvent& event)
+{
+    std::cout << "HandleMouseRightClick()" << std::endl;
 
+    if (auto intersect = PerformRaycast(event)) {
+        // Store the data for the OnPaint loop to use
+        m_SelectedPointWorldPos = intersect->point;
+        m_SelectedPointIndex = intersect->index.has_value() ? intersect->index.value() : -1;
+        m_IsPointSelected = true;
+
+        // update the text label content
+        UpdateSelectionUI(*intersect);
+        // move the marker point (circle)
+        HighlightSelectedObject(*intersect);
+
+        LogSelectionDebug(*intersect);
+    } else {
+        // No intersection, so hide UI
+        m_IsPointSelected = false;
+    }
+    Refresh(true); // Ensure a redraw is triggered
+}
+
+
+std::optional<threepp::Intersection> OpenGLCanvas::PerformRaycast(const wxMouseEvent& event)
+{
+    // Convert to NDC
+    int mouseX = event.GetX();
+    int mouseY = event.GetY();
+    int w, h;
+    GetSize(&w, &h);
+
+    threepp::Vector2 ndcMouse(
+        (2.0f * mouseX) / static_cast<float>(w) - 1.0f,
+        -((2.0f * mouseY) / static_cast<float>(h) - 1.0f)
+    );
+
+    if (auto customPoints = std::dynamic_pointer_cast<CustomPoints>(m_TrackPoints)) {
+        customPoints->setMousePosition(ndcMouse.x, ndcMouse.y);
+    }
+
+    m_RayCaster.setFromCamera(ndcMouse, *camera);
+    std::vector<threepp::Object3D*> objectsToRaycast = { m_TrackPoints.get() };
+    auto intersects = m_RayCaster.intersectObjects(objectsToRaycast, true);
+
+    if (!intersects.empty()) {
+        return intersects.front();
+    }
+    return std::nullopt;
+}
+
+
+void OpenGLCanvas::UpdateSelectionUI(const threepp::Intersection& intersect) {
+
+    // --- Update selection marker ---
+    m_SelectionMarkerPointCircle->position.copy(intersect.point);
+    m_SelectionMarkerPointCircle->visible = true;
+
+    // --- Build label text (coords + color) ---
+    std::stringstream ss;
+    ss << "x:" << std::fixed << std::setprecision(2) << intersect.point.x;
+    ss << "\ny:" << std::fixed << std::setprecision(2) << intersect.point.y;
+    ss << "\nz:" << std::fixed << std::setprecision(2) << intersect.point.z;
+
+    int pointIndex = 0;
+    if (auto points = dynamic_cast<threepp::Points*>(intersect.object)) {
+        if (intersect.index.has_value()) {
+            int idx = intersect.index.value();
+            pointIndex = idx;
+
+            if (auto* colAttr = dynamic_cast<threepp::FloatBufferAttribute*>(
+                    points->geometry()->getAttribute("color"))) {
+                float r = colAttr->getX(idx);
+                float g = colAttr->getY(idx);
+                float b = colAttr->getZ(idx);
+                float a = colAttr->getW(idx);
+                ss << "\nColor: (" << r << ", " << g << ", " << b << ", " << a << ")";
+            }
+        }
+    }
+
+    m_SelectionMarkerTextLabel->setText(ss.str());
+    m_SelectionMarkerTextLabel->visible = true;
+
+    // --- Update screen-space positions for label & sprite ---
+    UpdateLabelAndSpritePositions(intersect, pointIndex);
+}
+
+
+void OpenGLCanvas::UpdateLabelAndSpritePositions(const threepp::Intersection& intersect, int pointIndex)
+{
+    int w, h;
+    GetSize(&w, &h);
+
+    threepp::Vector3 projectedPoint = intersect.point;
+    projectedPoint.project(*camera);
+
+    // Label offset
+    float labelPixelX = ((projectedPoint.x + 1.0f) * 0.5f) * w + 20.0f;
+    float labelPixelY = ((projectedPoint.y + 1.0f) * 0.5f) * h - 20.0f;
+    threepp::Vector3 labelPos(
+        (labelPixelX / w) * 2.0f - 1.0f,
+        (labelPixelY / h) * 2.0f - 1.0f,
+        -0.9f
+    );
+    labelPos.unproject(*camera);
+    m_SelectionMarkerTextLabel->position.copy(labelPos);
+
+    // Sprite offset
+    float spritePixelX = ((projectedPoint.x + 1.0f) * 0.5f) * w + 20.0f;
+    float spritePixelY = ((projectedPoint.y + 1.0f) * 0.5f) * h + 20.0f;
+    threepp::Vector3 spritePos(
+        (spritePixelX / w) * 2.0f - 1.0f,
+        (spritePixelY / h) * 2.0f - 1.0f,
+        -0.9f
+    );
+    spritePos.unproject(*camera);
+    m_Sprite[0]->position.copy(spritePos);
+    m_Sprite[1]->position.copy(spritePos);
+
+    m_Sprite[0]->visible = (pointIndex % 2 == 0);
+    m_Sprite[1]->visible = !m_Sprite[0]->visible;
+}
+
+
+void OpenGLCanvas::HighlightSelectedObject(const threepp::Intersection& intersect) {
+    auto* selectedObject = intersect.object;
+
+    if (auto mesh = dynamic_cast<threepp::Mesh*>(selectedObject)) {
+        if (auto mat = std::dynamic_pointer_cast<threepp::MeshBasicMaterial>(mesh->material())) {
+            mat->color = threepp::Color::yellow;
+        }
+    } else if (auto points = dynamic_cast<threepp::Points*>(selectedObject)) {
+        if (auto mat = std::dynamic_pointer_cast<threepp::RawShaderMaterial>(points->material())) {
+            // You might highlight points differently, e.g., by updating a uniform
+        }
+    }
+}
+
+void OpenGLCanvas::LogSelectionDebug(const threepp::Intersection& intersect) {
+    std::cout << "Hit object: " << intersect.object->name;
+    if (intersect.index.has_value()) {
+        std::cout << " index: " << intersect.index.value();
+    }
+    std::cout << " point: " << intersect.point << std::endl;
+}
